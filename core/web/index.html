@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="build-id" content="@@GIT_COMMIT@@">
+  <meta name="project-version" content="@@PROJECT_VERSION@@">
+  <meta name="referrer" content="no-referrer">
+  <title>CrossTalk · Minecraft voice chat</title>
+  <link rel="stylesheet" href="css/v2.css">
+</head>
+<body>
+  <header><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">C</span> CrossTalk</a><span class="badge">JAVA + BEDROCK</span></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow"><span class="dot"></span> SAME WORLD. SAME CONVERSATION.</p>
+      <h1>Different editions.<br><span>One voice chat.</span></h1>
+      <p class="lead">Hear your friends as you explore. Join your Minecraft server, connect here, and keep this page open while you play.</p>
+      <div class="edition-row"><span>Java</span><span aria-hidden="true">↔</span><span>Bedrock</span></div>
+      <div class="steps"><p><b>01</b> Join the Minecraft server.</p><p><b>02</b> Set your voice password in-game with <code>/svg pswd</code>.</p><p><b>03</b> Enter your details, start your call, and allow your microphone.</p></div>
+      <p class="tip">Playing on console? Open this page on a phone or computer and use a headset. Keep your phone unlocked and this page in front.</p>
+    </section>
+    <section class="card" aria-labelledby="call-heading">
+      <div class="card-heading"><span class="eyebrow">YOUR CONNECTION</span><span class="pill" id="connection-pill">Offline</span></div>
+      <h2 id="call-heading">Come say hello.</h2>
+      <p class="muted" id="call-subtitle">Your next adventure sounds better together.</p>
+      <form id="call-form">
+        <label for="username">Minecraft username</label>
+        <input id="username" name="username" autocomplete="username" placeholder="Your in-game name" maxlength="64" required spellcheck="false" autocapitalize="none">
+        <p class="field-help">Use the name shown on the server, including a Bedrock prefix such as a dot.</p>
+        <label for="password">Voice password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="The password you set in-game" minlength="8" maxlength="32" required>
+        <p class="field-help">A separate voice password. Never use your Microsoft password.</p>
+        <button class="primary" id="start-call" type="submit">Start call <span aria-hidden="true">↗</span></button>
+      </form>
+      <div class="call-controls" id="call-controls" hidden>
+        <div class="mic-status"><span id="mic-light" class="mic-light"></span><span id="mic-text">Microphone on</span></div>
+        <button id="mute" type="button" aria-pressed="false">Mute microphone</button>
+        <button id="end-call" class="danger" type="button">End call</button>
+      </div>
+      <p id="status" role="status" aria-live="polite">Ready when you are.</p>
+      <div id="error" role="alert" hidden></div>
+      <details><summary>First time here?</summary><p>In Bedrock, type <code>/svg pswd</code> to open the password form. Choose a unique password with 8–32 characters.</p><p>If the form is unavailable, use <code>/svg pswd YOUR_VOICE_PASSWORD confirm</code>. This command may appear in your server's logs; use a password only for voice chat.</p><p>Java players who already use the Simple Voice Chat mod can stay in-game. They do not need this page.</p></details>
+    </section>
+  </main>
+  <footer><span>Proximity voice · Stay close, stay connected.</span><span>Built on <a href="https://github.com/TheodoreMeyer/SimpleVoice-Geyser" target="_blank" rel="noopener noreferrer">SimpleVoice-Geyser</a></span></footer>
+  <noscript>Enable JavaScript to use browser voice chat.</noscript>
+  <script type="module" src="js/v2.js"></script>
+</body>
+</html>

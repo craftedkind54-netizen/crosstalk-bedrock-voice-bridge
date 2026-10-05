@@ -1,0 +1,147 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+}
+
+dependencies {
+    // password encryption
+    implementation("org.mindrot:jbcrypt:0.4")
+
+    // Json
+    // Source: https://mvnrepository.com/artifact/org.json/json
+    implementation("org.json:json:20260522")
+
+    // GeyserMC API (provided by platform)
+    compileOnly("org.geysermc.geyser:api:${geysermc_api_version}")
+    compileOnly("org.geysermc.floodgate:api:${floodgate_api_version}")
+
+    // Jetty (embedded server)
+    implementation("org.eclipse.jetty:jetty-server:11.0.25")
+    implementation("org.eclipse.jetty:jetty-servlet:11.0.25")
+    implementation("org.eclipse.jetty.websocket:websocket-servlet:11.0.25")
+    implementation("org.eclipse.jetty.websocket:websocket-jetty-server:11.0.25")
+
+    // Simple Voice Chat API (provided by platform)
+    compileOnly("de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}")
+
+    testImplementation(platform("org.junit:junit-bom:5.12.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+tasks.processResources {
+    from(sourceSets.main.resources.srcDirs)
+
+    from("web") {
+        into("web")
+
+        filesMatching("*.html") {
+            filter { line ->
+                line.replace(
+                        "@@GIT_COMMIT@@",
+                        currentGitCommit()
+                ).replace(
+                        "@@PROJECT_VERSION@@",
+                        project.version.toString()
+                )
+            }
+        }
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    archiveBaseName.set("Svg-Core")
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifact(tasks.jar)
+            artifact(tasks.sourcesJar)
+            artifact(tasks.javadocJar)
+
+            groupId = project.group
+            artifactId = "svg-core"
+            version = project.version
+        }
+    }
+}
+//-----------
+//Build Identifier
+//-----------
+def currentGitCommit() {
+    try {
+        return providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+        }.standardOutput.asText.get().trim()
+    } catch (Exception ignored) {
+        return "unknown"
+    }
+}
+println("Gradle sees commit: ${currentGitCommit()}")
+
+// BuildInfo.java generation
+tasks.register("generateBuildInfo") {
+
+    def outputDir = layout.buildDirectory.dir("generated/sources/buildinfo")
+
+    outputs.dir(outputDir)
+
+    inputs.property("gitCommit", currentGitCommit())
+
+    doLast {
+        def gitCommit = currentGitCommit()
+
+        def file = outputDir.get()
+                .file("io/github/theodoremeyer/simplevoicegeyser/core/BuildInfo.java")
+                .asFile
+
+        file.parentFile.mkdirs()
+
+        file.text = """
+package io.github.theodoremeyer.simplevoicegeyser.core;
+
+/**
+ * Auto-generated build metadata.
+ */
+public final class BuildInfo {
+
+    private BuildInfo() {}
+
+    /**
+     * Git commit hash used for this build.
+     */
+    public static final String BUILD_ID = "${gitCommit}";
+
+    /**
+    * Project version used for this build.
+    */
+    public static final String PROJECT_VERSION = "${project.version}";
+}
+"""
+    }
+}
+
+// make Gradle compile generated source
+sourceSets.main.java.srcDir(
+        layout.buildDirectory.dir("generated/sources/buildinfo")
+)
+
+tasks.compileJava.dependsOn(tasks.generateBuildInfo)
+tasks.sourcesJar.dependsOn(tasks.generateBuildInfo)
+tasks.javadocJar.dependsOn(tasks.generateBuildInfo)

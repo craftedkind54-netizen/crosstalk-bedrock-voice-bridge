@@ -1,0 +1,114 @@
+ plugins {
+    id("base")
+}
+
+tasks.withType(Jar).configureEach {
+    enabled = false
+}
+
+allprojects {
+
+    group = 'io.github.theodoremeyer.simplevoicegeyser'
+    version = project.version
+
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url = uri('https://jitpack.io') }
+
+        maven {
+            url = uri("https://repo.maven.apache.org/maven2")
+        }
+        maven {
+            url = uri("https://oss.sonatype.org/content/repositories/releases/")
+        }
+        maven {
+            name = "henkelmax.public"
+            url = 'https://maven.maxhenkel.de/repository/public'
+        }
+        maven {
+            url = "https://repo.opencollab.dev/maven-snapshots"
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = "https://repo.opencollab.dev/maven-releases"
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        maven {
+            url = "https://repo.opencollab.dev/main/"
+        }
+        mavenLocal()
+    }
+}
+
+subprojects {
+    apply plugin: "java"
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(targetJava as int)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.release.set(targetJava as int)
+    }
+
+    tasks.withType(Jar).configureEach {
+        from(rootProject.layout.projectDirectory.file("LICENSE")) {
+            into("META-INF")
+            rename { "SVG_LICENSE" }
+        }
+        from(rootProject.layout.projectDirectory.file("NOTICE")) {
+            into("META-INF")
+            rename { "SVG_NOTICE" }
+        }
+        from(rootProject.layout.projectDirectory.file("Contributors.md")) {
+            into("META-INF")
+            rename { "SVG_CONTRIBUTORS" }
+        }
+    }
+}
+
+tasks.register("collectJars", Copy) {
+    group = "build"
+    description = "Collect all module jars into root build/libs"
+
+    // Depend only on tasks that actually exist
+    dependsOn(subprojects.collectMany { p ->
+        p.tasks.matching {
+            it.name in ["shadowJar", "sourcesJar", "javadocJar", "build"]
+        }
+    })
+
+    from(subprojects.collect { p ->
+        p.layout.buildDirectory.dir("libs")
+    })
+
+    into(layout.buildDirectory.dir("libs"))
+
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.named("build") {
+    finalizedBy("collectJars")
+}
+
+//SHADOW
+ext.applySvgRelocations = { task ->
+
+    // Relocate Jetty + Servlet + JSON + BCrypt
+    task.relocate("org.eclipse.jetty", "io.github.theodoremeyer.simplevoicegeyser.shadow.jetty")
+    task.relocate("jakarta.servlet", "io.github.theodoremeyer.simplevoicegeyser.shadow.servlet")
+    task.relocate("org.json", "io.github.theodoremeyer.simplevoicegeyser.shadow.json")
+    task.relocate("org.mindrot", "io.github.theodoremeyer.simplevoicegeyser.shadow.mindrot")
+    task.relocate("org.slf4j", "io.github.theodoremeyer.simplevoicegeyser.shadow.slf4j")
+    logger.info("Loaded relocations for", task)
+
+}
+

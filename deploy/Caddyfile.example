@@ -1,0 +1,12 @@
+# Replace voice.example.com with a domain whose DNS points to this machine.
+# Caddy and Paper must run on the same host for this loopback address to work.
+# Permit inbound TCP 80 and 443 for HTTPS, but keep port 8080 private.
+voice.example.com {
+    reverse_proxy 127.0.0.1:8080
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Permissions-Policy "microphone=(self), camera=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    }
+}

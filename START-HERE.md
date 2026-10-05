@@ -1,0 +1,70 @@
+# CrossTalk: installation
+
+This package adds browser voice chat to a Paper server with Simple Voice Chat.
+It is a customized MIT-licensed build of SimpleVoice-Geyser, not a Bedrock add-on.
+
+## Server owner: one-time setup
+
+1. Stop your Paper server and back up its plugins/configuration.
+2. Put `CrossTalk-Paper-0.1.4-crosstalk.1.jar` in `plugins/`.
+   If SimpleVoice-Geyser is already installed, replace it: do not run both.
+3. Keep **Simple Voice Chat's Bukkit/Paper plugin** on the server, plus your
+   existing Geyser/Floodgate setup. Your `voicechat-fabric-1.21.11-2.6.22.jar`
+   belongs in the Java player's Fabric client `mods/` directory.
+   Fabric API is not a Paper plugin and does not add browser voice by itself.
+4. Start the server once. CrossTalk creates `plugins/SimpleVoice-Geyser/` and
+   serves its website on `127.0.0.1:8080` by default.
+5. Connect a public **HTTPS** address to this service. On a VPS with Caddy on
+   the same machine, use `deploy/Caddyfile.example` and replace the domain.
+   Caddy handles both the page and its WebSocket connection.
+   On a managed Minecraft host, ask for an extra TCP port and an HTTPS reverse
+   proxy that supports WebSockets. Follow the host's bind-address requirements;
+   container hosts commonly need `server.bind-address: 0.0.0.0` and their
+   allocated port. The unencrypted origin must remain behind the proxy on a
+   private/trusted connection or tunnel. Do not use a public HTTP address.
+6. Give players your HTTPS URL. No separate website upload is needed.
+
+The host name and domain are needed to finish step 5 for your particular server.
+GitHub stores/builds the code; GitHub Pages cannot run this Java voice server.
+
+## Players
+
+1. Join your Minecraft server.
+2. Bedrock: run `/svg pswd` and set a unique 8–32 character voice password in
+   the form. If your server cannot show forms, use
+   `/svg pswd YOUR_VOICE_PASSWORD confirm`. Command arguments can appear in
+   server logs, so use a password only for this voice service.
+3. Open the HTTPS voice page on your phone or computer. Enter your exact
+   server username (including any Bedrock prefix) and voice password.
+4. Press **Start call**, allow the microphone, and keep the page open.
+
+Java players with Simple Voice Chat installed use the in-game mod normally.
+Browser users must stay logged into Minecraft. Leaving/disconnecting stops
+the browser microphone. A username alone cannot authorize a voice session.
+
+## First live test
+
+Use one Java player with the mod and one Bedrock player with the browser.
+Stand together in the same world; speak in each direction. Move beyond the
+configured Simple Voice Chat range and confirm proximity audio fades/stops.
+Test mute, End call, leaving Minecraft, and two simultaneous speakers.
+Use headphones to avoid echo. Leave groups with `/svg lgroup` if testing
+proximity; group settings can intentionally change who hears whom.
+
+## If something does not connect
+
+- Website unreachable: verify the extra TCP port, bind address, DNS and proxy.
+- Page works but call fails: the proxy must forward `/ws` WebSocket upgrades.
+- Microphone blocked: use HTTPS and allow this site's microphone permission.
+- Invalid login: use the exact server name/prefix and the voice password,
+  not a Microsoft password. Reset it in-game with `/svg pswd` if needed.
+- Voice plugin unavailable: install the Bukkit/Paper build of Simple Voice Chat
+  on Paper. The attached Fabric jar is for Java clients.
+- Browser dies in the background: keep the phone unlocked with this page open,
+  or use a second device. Mobile operating systems may suspend background audio.
+- Java players cannot hear each other either: fix Simple Voice Chat's UDP port
+  first. It must be separate from Geyser's UDP port.
+
+Built and unit-tested locally. A live Java-to-Bedrock call still requires the
+actual server/HTTPS setup and two logged-in Minecraft clients; that has not
+been verified on your server yet.

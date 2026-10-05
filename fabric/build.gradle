@@ -1,0 +1,67 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'net.fabricmc.fabric-loom' version '1.16-SNAPSHOT'
+    id 'com.gradleup.shadow' version '9.4.0'
+}
+
+repositories {
+    maven {
+        url = "https://maven.fabricmc.net/"
+    }
+}
+
+dependencies {
+
+    // =========================
+    // FABRIC
+    // =========================
+    minecraft "com.mojang:minecraft:${project.fabric_mc_version}"
+
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // =========================
+    // SHARED CORE
+    // =========================
+    shadow project(":core")
+
+    // =========================
+    // APIs (compile only)
+    // =========================
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
+
+    compileOnly 'net.luckperms:api:5.5'
+}
+
+base {
+    setArchivesName(project.fabric_archives_base_name)
+}
+
+tasks.processResources {
+    inputs.property("version", version)
+    inputs.property("voicechat_api_version", voicechat_api_version)
+    inputs.property("mc_min", fabric_mc_version)
+
+    filesMatching('fabric.mod.json') {
+        expand(
+                version: version,
+                voicechat_api_version: voicechat_api_version,
+                mc_min: fabric_mc_version,
+        )
+    }
+}
+
+tasks.shadowJar {
+    mergeServiceFiles()
+
+    archiveClassifier.set("") // remove "-dev-shadow"
+
+    configurations = [project.configurations.shadow]
+
+    rootProject.applySvgRelocations(delegate)
+}
+
+tasks.jar {
+    enabled = false
+}

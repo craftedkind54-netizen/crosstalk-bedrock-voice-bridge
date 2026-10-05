@@ -1,0 +1,425 @@
+import {
+    decodeSvgV2Frame,
+    getAudioCapabilities,
+    getAudioDecompileStats,
+    warmupAudioDecompiler
+} from "./audio/AudioByteDecompiler.js";
+import {Logger} from "./utils/logger.js";
+
+export class SvgWebSocket {
+
+    static MAX_RECONNECT_ATTEMPTS = 5;
+    static DisconnectPolicy = {
+        FATAL: new Set([4003, 4004, 4005]),
+        NO_RECONNECT: new Set([4001, 4004, 4005, 4006]),
+        TIMEOUT: 4002,
+        SERVER_SHUTDOWN: 4006,
+        OUTDATED: 4008
+    };
+    #eventListeners = {
+        statusChange: [],
+        message: []
+    };
+
+    /**
+     *
+     * @param {SvgAudio}audioController
+     */
+    constructor(audioController) {
+        this.audioController = audioController;
+        this.ws = null;
+        this.reconnectTimeout = null;
+        this.lastCredentials = null;
+        this.#resetState();
+    }
+
+    initWebSocket() {
+        void warmupAudioDecompiler();
+
+        this.audioController.onMicData((packet) => {
+            if (this.hasJoined && this.ws && this.ws.readyState === WebSocket.OPEN
+                && this.ws.bufferedAmount < 19200) {
+                this.ws.send(packet);
+            }
+        });
+    }
+
+    connect(username, password, onStatusChange) {
+        this.disconnect();
+        this.lastCredentials = { username, password };
+        this.#resetState();
+        this.addEventListener("statusChange", onStatusChange);
+        this.#createSocket();
+    }
+
+    addEventListener(type, listener, persistsAfterConnection = false) {
+        if (!Object.hasOwn(this.#eventListeners, type)) {
+            Logger.log(`Cannot add event listener for event "${type}" because it does not exist.`)
+            return;
+        }
+        this.#eventListeners[type].push({
+            func: listener,
+            isPersistent: persistsAfterConnection
+        });
+    }
+    #runEventListeners(type, ...args) {
+        this.#eventListeners[type].forEach(listener => listener.func(...args));
+    }
+    #removeTemporaryEventListeners() {
+        for (const type in this.#eventListeners) {
+            this.#eventListeners[type] = this.#eventListeners[type].filter(listener => listener.isPersistent);
+        }
+    }
+
+    #resetState() {
+        this.reconnectAttempts = 0;
+        this.manualClose = false;
+        this.hasJoined = false;
+        this.fatalAuthError = false;
+        this.capabilitiesSent = false;
+        this.rxBinaryFrames = 0;
+        this.rxBinaryBytes = 0;
+        this.rxStereoFrames = 0;
+        this.rxMonoFrames = 0;
+        this.rxMalformedFrames = 0;
+        this.rxSvgV2Frames = 0;
+        this.rxLegacyFrames = 0;
+        this.rxDecoderFallbacks = 0;
+        this.reOpen = true;
+
+        this.#removeTemporaryEventListeners();
+    }
+
+    #createSocket() {
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        const pageUrl = new URL(window.location.href);
+        if (!pageUrl.pathname.endsWith("/")) {
+            const lastSegment = pageUrl.pathname.substring(pageUrl.pathname.lastIndexOf("/") + 1);
+            const looksLikeFile = lastSegment.includes(".");
+            pageUrl.pathname = looksLikeFile
+                ? pageUrl.pathname.substring(0, pageUrl.pathname.lastIndexOf("/") + 1)
+                : `${pageUrl.pathname}/`;
+        }
+
+        const wsUrl = new URL("ws", pageUrl);
+        wsUrl.protocol = protocol;
+
+        this.ws = new WebSocket(wsUrl.href);
+        const currentSocket = this.ws;
+        this.ws.binaryType = "arraybuffer";
+        this.fatalAuthError = false;
+
+        this.ws.onopen = () => {
+            if (this.ws !== currentSocket) return;
+            this.ws.send(JSON.stringify({
+                type: "join",
+                ...this.lastCredentials,
+                clientType: {
+                    type: "Web",
+                    serverVersion: window.PROJECT_VERSION || "unknown",
+                    serverBuild: window.BUILD_ID || "unknown"
+                }
+            }));
+            Logger.log("Connection opened. Waiting for account verification.");
+        };
+
+        this.ws.onmessage = async (event) => {
+            if (this.ws !== currentSocket) return;
+            if (typeof event.data === "string") {
+                try {
+                    const data = JSON.parse(event.data);
+                    const packetType = String(data.type || "").toLowerCase();
+                    const msg = String(data.message || "").toLowerCase();
+
+                    if (data?.fatal === true) {
+                        this.fatalAuthError = true;
+                        this.stopReconnection();
+                    }
+
+                    if (packetType === "status" && msg.includes("connected as")) {
+                        this.hasJoined = true;
+                        this.reconnectAttempts = 0;
+                        this.#runEventListeners("statusChange", {
+                            connected: true,
+                            username: this.lastCredentials.username
+                        });
+                        await this.#sendCapabilitiesOnce();
+                    }
+
+                    if (packetType === "capabilities_ack") {
+                        Logger.log(`[AudioRX] Server selected transport mode: ${data.selectedMode || "legacy"}`);
+                    }
+
+                    if (packetType === "error") {
+                        const isFatalError = msg.includes("bedrock player to join") ||
+                            msg.includes("use /svg pswd") ||
+                            msg.includes("access denied:") ||
+                            msg.includes("timeout") ||
+                            msg.includes("left the game.");
+
+                        if (isFatalError) {
+                            this.fatalAuthError = true;
+                            this.stopReconnection();
+
+                            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                                this.ws.close();
+                            }
+                        }
+                    }
+
+                    if (msg.includes("left the game.")) {
+                        this.stopReconnection();
+                    }
+
+                    Logger.debug((packetType || "info") + ": " + (data.message || JSON.stringify(data)));
+
+                    this.#runEventListeners("message", {
+                        type: "json",
+                        fatalAuthError: this.fatalAuthError,
+                        packetType: packetType,
+                        msg: String(data.message || "")
+                    })
+                } catch {
+                    Logger.log("Received non-JSON message: " + event.type);
+                    Logger.debug("Server: " + event.data);
+
+                    this.#runEventListeners("message", {
+                        type: "text",
+                        eventType: event.type,
+                        eventData: event.data
+                    })
+                }
+            } else {
+                await this.#handleIncomingBinaryFrame(event.data);
+            }
+        };
+
+        this.ws.onclose = (event) => {
+            if (this.ws !== currentSocket) return;
+            const code = event.code;
+            const reason = event.reason || "";
+
+            Logger.log("Disconnected.");
+            console.log("WebSocket closed:", code, reason);
+
+            this.audioController.resetAudioState();
+            this.audioController.stopMic();
+            this.hasJoined = false;
+            this.#runEventListeners("statusChange", {
+                connected: false,
+                code: code,
+                reason: reason
+            });
+
+            if (code === SvgWebSocket.DisconnectPolicy.OUTDATED || reason === "update_required") {
+                this.stopReconnection();
+                Logger.log("Outdated client. Reloading...");
+                alert("Update required. Reloading page.");
+                location.reload();
+                return;
+            }
+
+            // Fatal disconnect: hard stop.
+            if (SvgWebSocket.DisconnectPolicy.FATAL.has(code) || reason === "fatal") {
+                this.fatalAuthError = true;
+                this.stopReconnection();
+                Logger.log("Fatal disconnect. Reconnect disabled.");
+                return;
+            }
+
+            if (code === SvgWebSocket.DisconnectPolicy.SERVER_SHUTDOWN) {
+                this.stopReconnection();
+                Logger.log("Server shutdown: " + reason);
+                return;
+            }
+
+            if (code === SvgWebSocket.DisconnectPolicy.TIMEOUT) {
+                Logger.log("Timeout disconnect.");
+            }
+
+            if (SvgWebSocket.DisconnectPolicy.NO_RECONNECT.has(code)) {
+                this.stopReconnection();
+                return;
+            }
+
+            const shouldReconnect = !this.manualClose
+                && this.lastCredentials
+                && this.reOpen
+                && !this.fatalAuthError
+                && this.reconnectAttempts < SvgWebSocket.MAX_RECONNECT_ATTEMPTS;
+
+            if (shouldReconnect) {
+                this.reconnectAttempts++;
+                this.reconnectTimeout = setTimeout(() => {
+                    Logger.log(`Reconnecting... (${this.reconnectAttempts}/${SvgWebSocket.MAX_RECONNECT_ATTEMPTS})`);
+                    this.#createSocket();
+                }, 3000);
+            } else if (!this.manualClose && !this.hasJoined) {
+                Logger.log("Stopped reconnecting after repeated pre-join failures.");
+            }
+        };
+
+        this.ws.onerror = () => {
+            if (this.ws !== currentSocket) return;
+            Logger.log("WebSocket error occurred.");
+
+            if (this.ws.readyState !== WebSocket.OPEN) {
+                this.stopReconnection();
+            }
+        };
+    }
+
+    isConnected() {
+        return !!(
+            this.hasJoined && this.ws &&
+            this.ws.readyState === WebSocket.OPEN
+        );
+    }
+
+    stopReconnection() {
+        this.reOpen = false;
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+    }
+
+    disconnect() {
+        this.manualClose = true;
+        this.lastCredentials = null;
+        this.hasJoined = false;
+        this.fatalAuthError = false;
+        this.reconnectAttempts = 0;
+
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
+        if (this.ws) {
+            const closingSocket = this.ws;
+            this.ws = null;
+            closingSocket.close();
+        }
+    }
+
+    sendChat(msg) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: "chat", message: msg }));
+        }
+    }
+
+    async #sendCapabilitiesOnce() {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN || this.capabilitiesSent) {
+            return;
+        }
+        this.capabilitiesSent = true;
+
+        try {
+            const caps = await getAudioCapabilities();
+            const runtime = this.audioController.getAudioRuntime();
+            const canUseSvgV2 = caps.supportsSvgV2 && runtime.workletSupported;
+            const canDecodeOpus = caps.supportsOpusDecoder && runtime.workletSupported;
+            this.ws.send(JSON.stringify({
+                type: "capabilities",
+                audio: {
+                    protocols: canUseSvgV2 ? ["legacy", "svg-v2"] : ["legacy"],
+                    supportsOpusDecoder: canDecodeOpus,
+                    secureContext: caps.secureContext,
+                    decoder: caps.decoder
+                }
+            }));
+
+            Logger.log(
+                `[AudioRX] Client capabilities sent: ` +
+                `svg-v2=${canUseSvgV2} opusDecoder=${canDecodeOpus} secure=${caps.secureContext}`
+            );
+        } catch (err) {
+            this.rxDecoderFallbacks++;
+            Logger.log(`[AudioRX] Failed to report capabilities, using legacy fallback: ${err?.message || err}`);
+        }
+    }
+
+     async #handleIncomingBinaryFrame(arrayBuffer) {
+        if (!this.hasJoined) return;
+        this.rxBinaryFrames++;
+        this.rxBinaryBytes += arrayBuffer.byteLength || 0;
+
+        const view = new DataView(arrayBuffer);
+        if (view.byteLength >= 4 && view.getUint32(0) === 0x43545031) {
+            if (view.byteLength <= 20 || (view.byteLength - 20) % 4 !== 0) {
+                this.rxMalformedFrames++;
+                return;
+            }
+            const source = Array.from(new Uint8Array(arrayBuffer, 4, 16), b => b.toString(16).padStart(2, "0")).join("");
+            const samples = new Float32Array((view.byteLength - 20) / 2);
+            for (let i = 0; i < samples.length; i++) samples[i] = view.getInt16(20 + i * 2, true) / 32768;
+            this.audioController.playAudio({ samples, channels: 2, streamId: source });
+            return;
+        }
+
+        const v2Result = await decodeSvgV2Frame(arrayBuffer);
+        if (v2Result) {
+            if (v2Result.malformed) {
+                this.rxMalformedFrames++;
+                Logger.debug(`[AudioRX] svg-v2 frame ignored: ${v2Result.reason || "malformed"}`);
+                return;
+            }
+
+            this.rxSvgV2Frames++;
+            const packet = v2Result.packet;
+            if (packet.channels === 2) {
+                this.rxStereoFrames++;
+            } else {
+                this.rxMonoFrames++;
+            }
+            this.audioController.playAudio(packet);
+            this.#maybeLogAudioStats();
+            return;
+        }
+
+         this.rxLegacyFrames++;
+        const packet = this.#decodeLegacyPcm16(arrayBuffer);
+        if (packet.channels === 2) {
+            this.rxStereoFrames++;
+        } else {
+            this.rxMonoFrames++;
+        }
+        this.audioController.playAudio(packet);
+         this.#maybeLogAudioStats();
+    }
+
+    #maybeLogAudioStats() {
+        if (this.rxBinaryFrames % 100 !== 0) {
+            return;
+        }
+        const decompile = getAudioDecompileStats();
+        Logger.debug(
+            `[AudioRX] frames=${this.rxBinaryFrames} bytes=${this.rxBinaryBytes} ` +
+            `legacy=${this.rxLegacyFrames} svgV2=${this.rxSvgV2Frames} ` +
+            `stereo=${this.rxStereoFrames} mono=${this.rxMonoFrames} malformed=${this.rxMalformedFrames} ` +
+            `decodeErrors=${decompile.decodeErrors} fallbackReports=${this.rxDecoderFallbacks}`
+        );
+    }
+
+    #decodeLegacyPcm16(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        const byteLength = view.byteLength;
+
+        if (byteLength % 2 !== 0) {
+            this.rxMalformedFrames++;
+        }
+        const sampleCount = Math.floor(view.byteLength / 2);
+        if (sampleCount <= 0) {
+            return { samples: new Float32Array(0), channels: 1 };
+        }
+
+        const channels = byteLength % 4 === 0 ? 2 : 1;
+        const out = new Float32Array(sampleCount);
+        for (let i = 0; i < sampleCount; i++) {
+            out[i] = view.getInt16(i * 2, true) / 32768;
+        }
+
+        return { samples: out, channels };
+    }
+}
