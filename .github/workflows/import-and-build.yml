@@ -1,0 +1,69 @@
+name: Import source and publish development build
+on:
+  push:
+    paths: ['.github/workflows/import-and-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import prepared source archive
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import zipfile
+          archive = Path('CrossTalk-GitHub-Source.zip')
+          if archive.exists():
+              with zipfile.ZipFile(archive) as source:
+                  for item in source.infolist():
+                      parts = PurePosixPath(item.filename).parts
+                      if not parts or parts[0] != 'bedrock-voice-bridge' or '..' in parts:
+                          raise ValueError('Unexpected archive path')
+                      relative = PurePosixPath(*parts[1:])
+                      if item.is_dir() or str(relative).startswith('.github/workflows/'):
+                          continue
+                      destination = Path(str(relative))
+                      destination.parent.mkdir(parents=True, exist_ok=True)
+                      destination.write_bytes(source.read(item))
+              archive.unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Import complete CrossTalk source tree'
+            git push
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test browser audio and connections
+        run: npm test
+      - name: Build and test Paper plugin
+        run: bash gradlew :core:test :spigot:shadowJar --no-daemon
+      - name: Package installation files
+        run: |
+          mkdir -p release/CrossTalk-Paper/deploy
+          cp spigot/build/libs/CrossTalk-Paper-*.jar release/CrossTalk-Paper/
+          cp START-HERE.md LICENSE NOTICE release/CrossTalk-Paper/
+          cp deploy/Caddyfile.example release/CrossTalk-Paper/deploy/
+          cd release/CrossTalk-Paper
+          sha256sum *.jar > SHA256SUMS.txt
+          cd ..
+          zip -r CrossTalk-Paper-Install.zip CrossTalk-Paper
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossTalk-Paper
+          path: release/
+      - name: Publish development release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v0.1.4-crosstalk.1             release/CrossTalk-Paper/CrossTalk-Paper-0.1.4-crosstalk.1.jar             release/CrossTalk-Paper-Install.zip             release/CrossTalk-Paper/SHA256SUMS.txt             --target main --prerelease             --title 'CrossTalk Paper development build'             --notes 'Browser voice bridge for Java Simple Voice Chat and Bedrock players. Server and browser tests run in GitHub Actions. Install the Paper jar beside Simple Voice Chat and configure HTTPS using START-HERE.md. This is a development build: a live call on the target Minecraft server has not yet been verified. Based on the MIT-licensed SimpleVoice-Geyser project.'
