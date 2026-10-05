@@ -29,6 +29,9 @@ jobs:
                       destination.parent.mkdir(parents=True, exist_ok=True)
                       destination.write_bytes(source.read(item))
               archive.unlink()
+          wrapper = Path('gradlew')
+          wrapper.write_bytes(wrapper.read_bytes().replace(b'\r\n', b'\n'))
+          Path('.gitattributes').write_text('gradlew text eol=lf\n*.bat text eol=crlf\n')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
