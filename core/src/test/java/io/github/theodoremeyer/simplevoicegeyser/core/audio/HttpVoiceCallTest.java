@@ -121,8 +121,13 @@ class HttpVoiceCallTest {
             assertTrue(live.isAuthenticated());
             Field channel = live.getClass().getDeclaredField("session"); channel.setAccessible(true);
             ((VoiceTransport)channel.get(live)).sendBinary(new byte[]{9,8,7});
-            var exchange = post(base + "exchange", new JSONObject().put("audio", new JSONArray().put(Base64.getEncoder().encodeToString(new byte[1920]))), token);
-            assertEquals(200, exchange.statusCode()); assertEquals(1, uploaded.get());
+            var batch = new JSONArray();
+            for (int i=0;i<40;i++) batch.put(Base64.getEncoder().encodeToString(new byte[1920]));
+            var exchange = post(base + "exchange", new JSONObject().put("audio", batch), token);
+            assertEquals(200, exchange.statusCode());
+            long deadline = System.nanoTime() + 2_000_000_000L;
+            while (uploaded.get() < 40 && System.nanoTime() < deadline) Thread.sleep(10);
+            assertEquals(40, uploaded.get());
             assertArrayEquals(new byte[]{9,8,7}, Base64.getDecoder().decode(new JSONObject(exchange.body()).getJSONArray("audio").getString(0)));
             post(base + "close", new JSONObject(), token);
             assertNull(SvgCore.getConnectionManager().get(player.getUniqueId())); assertEquals(1, removed.get());

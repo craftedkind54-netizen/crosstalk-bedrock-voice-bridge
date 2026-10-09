@@ -12,7 +12,7 @@ import org.json.*;
 
 /** Same-origin HTTPS fallback; credentials only on join, random bearer tokens thereafter. */
 public final class HttpVoiceServlet extends HttpServlet {
-    private static final int MAX_BODY = 65536;
+    private static final int MAX_BODY = 131072;
     private final Map<String, Call> calls = new ConcurrentHashMap<>();
     private final Semaphore joins = new Semaphore(4);
     private final SecureRandom random = new SecureRandom();
@@ -21,6 +21,7 @@ public final class HttpVoiceServlet extends HttpServlet {
     private static final class Call {
         final HttpVoiceTransport transport;
         final JettyWebSocket protocol;
+        final io.github.theodoremeyer.simplevoicegeyser.core.audio.PcmFrameQueue incoming = new io.github.theodoremeyer.simplevoicegeyser.core.audio.PcmFrameQueue();
         long lastSeen = System.nanoTime();
         boolean disposed;
         Call(String remote) {
@@ -33,6 +34,7 @@ public final class HttpVoiceServlet extends HttpServlet {
         synchronized void dispose() {
             if (disposed) return;
             disposed = true;
+            incoming.clear();
             transport.close(1000, "HTTPS call ended");
             protocol.onClose(1000, "HTTPS call ended");
         }
@@ -42,6 +44,20 @@ public final class HttpVoiceServlet extends HttpServlet {
         cleanup = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "CrossTalk-HTTPS-cleanup"); thread.setDaemon(true); return thread;
         });
+        // Restore the 20ms microphone cadence after an HTTPS batch arrives.
+        // The queue enforces cadence and suppresses catch-up bursts after a stall.
+        cleanup.scheduleAtFixedRate(() -> {
+            for (Call call : calls.values()) {
+                synchronized (call) {
+                    if (call.disposed || !call.transport.isOpen()) continue;
+                    byte[] pcm = call.incoming.poll(System.nanoTime());
+                    if (pcm != null) {
+                        try { call.protocol.onMessage(pcm, 0, pcm.length); }
+                        catch (Exception error) { SvgCore.getLogger().debug("HTTPS audio failed", error); }
+                    }
+                }
+            }
+        }, 5, 5, TimeUnit.MILLISECONDS);
         cleanup.scheduleWithFixedDelay(() -> {
             for (var entry : calls.entrySet()) {
                 Call call = entry.getValue();
@@ -114,7 +130,7 @@ public final class HttpVoiceServlet extends HttpServlet {
                     calls.remove(token, call); call.dispose(); reply(resp, 200, call.transport.drain()); return;
                 }
                 JSONArray frames = body.optJSONArray("audio");
-                if (frames == null || frames.length() > 10) { reply(resp, 400, error("Invalid audio batch.")); return; }
+                if (frames == null || frames.length() > 40) { reply(resp, 400, error("Invalid audio batch.")); return; }
                 // Validate the entire batch before forwarding any audio.
                 List<byte[]> decoded = new ArrayList<>();
                 for (int i = 0; i < frames.length(); i++) {
@@ -126,7 +142,7 @@ public final class HttpVoiceServlet extends HttpServlet {
                 }
                 call.lastSeen = System.nanoTime();
                 if (call.transport.isOpen()) {
-                    for (byte[] pcm : decoded) call.protocol.onMessage(pcm, 0, pcm.length);
+                    for (byte[] pcm : decoded) call.incoming.add(pcm, System.nanoTime());
                 }
                 reply(resp, 200, call.transport.drain());
             }

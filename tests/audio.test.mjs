@@ -42,7 +42,7 @@ test("short utterances play even without seven buffered packets", () => {
 test("latency and speaker memory are bounded; end call clears playback", () => {
     const p = processor();
     enqueue(p, "alice", 0.4, 48000);
-    assert.equal(p.streams.get("alice").available, 9600);
+    assert.equal(p.streams.get("alice").available, 48000);
     for (let i = 0; i < 90; i++) enqueue(p, String(i), 0.1);
     assert.equal(p.streams.size, 64);
     p.port.onmessage({ data: { type: "reset" } });
@@ -62,4 +62,38 @@ test("speaker identity survives main-thread delivery", () => {
     audio.audioWorkletNode = { port: { postMessage: data => { delivered = data; } } };
     audio.playAudio({ samples: new Float32Array(1920), channels: 2, streamId: "alice" });
     assert.equal(delivered.buffer.streamId, "alice");
+});
+
+test("HTTPS playback preserves every sample across 300ms delivery bursts", () => {
+    const p = processor();
+    p.port.onmessage({data:{type:"buffer-ms",milliseconds:300}});
+    let played = 0;
+    // 300ms of speech arrives at once, followed by another batch 300ms later.
+    for (let batch = 0; batch < 4; batch++) {
+        enqueue(p, "alice", 0.25, 14400);
+        for (let i = 0; i < 112; i++) played += render(p)[0].filter(v => v !== 0).length;
+    }
+    for(let i=0;i<120;i++) played += render(p)[0].filter(v=>v!==0).length;
+    assert.equal(played, 4*14400);
+});
+test("HTTPS plays a short word even when the jitter cushion never fills", () => {
+    const p = processor();
+    p.port.onmessage({data:{type:"buffer-ms",milliseconds:300}});
+    enqueue(p,"alice",0.25,960);
+    let played=0;
+    for(let i=0;i<130;i++) played += render(p)[0].filter(v=>v!==0).length;
+    assert.equal(played,960);
+});
+test("microphone hangover retains quiet word endings", () => {
+    let Processor;
+    const context=vm.createContext({Float32Array,Math,sampleRate:48000,
+      AudioWorkletProcessor:class {constructor(){this.port={postMessage:data=>this.last=data};}},
+      registerProcessor:(_,p)=>Processor=p});
+    vm.runInContext(readFileSync(new URL("../core/web/js/audio/microphone.js",import.meta.url),"utf8"),context);
+    const p=new Processor();
+    p.process([[new Float32Array(128).fill(0.1)]]);
+    for(let i=0;i<75;i++)p.process([[new Float32Array(128)]]);
+    assert.equal(p.last.speech,true);
+    for(let i=0;i<25;i++)p.process([[new Float32Array(128)]]);
+    assert.equal(p.last.speech,false);
 });

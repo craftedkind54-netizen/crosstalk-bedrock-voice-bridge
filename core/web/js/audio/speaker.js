@@ -3,8 +3,13 @@ class SpeakerProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
         this.streams = new Map();
-        this.capacity = 9600;
+        this.capacity = 48000;
+        this.target = 1920;
         this.port.onmessage = ({ data }) => {
+            if (data.type === "buffer-ms") {
+                this.target = Math.round(Math.max(40, Math.min(500, Number(data.milliseconds) || 40)) * 48);
+                return;
+            }
             if (data.type === "reset") { this.streams.clear(); return; }
             if (data.type !== "pcm") return;
             const packet = data.buffer instanceof Float32Array
@@ -41,14 +46,15 @@ class SpeakerProcessor extends AudioWorkletProcessor {
         for (const [id, stream] of this.streams) {
             if (!stream.available) {
                 stream.idle += left.length;
-                if (stream.idle > 4800) { stream.started = false; stream.waiting = 0; }
+                stream.started = false; stream.waiting = 0;
                 if (stream.idle > 240000) this.streams.delete(id);
                 continue;
             }
             if (!stream.started) {
                 stream.waiting += left.length;
-                // Start after two packets, or 40ms even for a single short word.
-                if (stream.available < 1920 && stream.waiting < 1920) continue;
+                // HTTPS arrives in batches: retain a playout cushion between responses.
+                // A timeout also plays a short word that never fills the cushion.
+                if (stream.available < this.target && stream.waiting < this.target) continue;
                 stream.started = true;
             }
             for (let i = 0; i < left.length && stream.available; i++) {

@@ -24,8 +24,8 @@ test('HTTPS authenticates before sending audio; batches audio, preserves binary 
     assert.equal(calls[0].url, 'https://voice.example.com/prefix/api/voice/join');
     assert.equal(calls[1].headers.Authorization, 'Bearer test-token');
     assert.ok(!calls[1].body.includes('test-only'));
-    for (let i = 0; i < 20; i++) socket.send(new ArrayBuffer(1920));
-    assert.equal(socket.queue.length, 10);
+    for (let i = 0; i < 50; i++) socket.send(new ArrayBuffer(1920));
+    assert.equal(socket.queue.length, 40);
     completeExchange(response({open:true, audio:[btoa('\x01\x02')]}));
     await tick();
     assert.deepEqual([...new Uint8Array(messages.at(-1))], [1,2]);
@@ -72,4 +72,33 @@ test('a join completing after End call releases its token and cannot revive the 
     assert.equal(delivered, false);
     assert.ok(calls.at(-1).endsWith('/close'));
     assert.equal(socket.readyState, 3);
+});
+
+test('a 350ms round trip preserves all microphone frames and adds no fixed 60ms delay', async () => {
+    const realNow=Date.now, realTimeout=globalThis.setTimeout, realClear=globalThis.clearTimeout;
+    let now=0, nextDelay, pending;
+    Date.now=()=>now;
+    globalThis.setTimeout=(fn,ms)=>{ if(ms!==8000)nextDelay=ms; return 1; };
+    globalThis.clearTimeout=()=>{};
+    const bodies=[];
+    globalThis.fetch=async (url,options)=>{
+        if(String(url).endsWith('/close'))return response({});
+        bodies.push(JSON.parse(options.body));
+        return new Promise(resolve=>pending=resolve);
+    };
+    const socket=new HttpVoiceSocket('wss://voice.example.com/ws');
+    try {
+        await tick(); socket.token='test-token';
+        const first=socket.poll();
+        for(let i=0;i<17;i++){now=i*20;socket.send(new ArrayBuffer(1920));}
+        now=350;
+        pending(response({open:true}));
+        await first;
+        assert.equal(nextDelay,0);
+        const second=socket.poll();
+        assert.equal(bodies[1].audio.length,17);
+        pending(response({open:true})); await second;
+    } finally {
+        socket.close(); Date.now=realNow; globalThis.setTimeout=realTimeout; globalThis.clearTimeout=realClear;
+    }
 });

@@ -30,7 +30,7 @@ class HttpVoiceEndpointTest {
             assertEquals(401, post(client, base + "close", "{}", false).statusCode());
             assertEquals(415, post(client, base + "join", "{}", true).statusCode());
             assertEquals(400, post(client, base + "join", "not-json", false).statusCode());
-            assertEquals(413, post(client, base + "join", "x".repeat(65537), false).statusCode());
+            assertEquals(413, post(client, base + "join", "x".repeat(131073), false).statusCode());
             assertEquals(400, post(client, base + "join", new JSONObject().put("username", "x".repeat(65)).toString(), false).statusCode());
         } finally { server.stop(); }
     }

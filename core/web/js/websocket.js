@@ -5,7 +5,7 @@ import {
     warmupAudioDecompiler
 } from "./audio/AudioByteDecompiler.js";
 import {Logger} from "./utils/logger.js";
-import {HttpVoiceSocket} from "./http-voice.js";
+import {HttpVoiceSocket} from "./http-voice.js?crosstalk=6";
 
 export class SvgWebSocket {
 
@@ -39,7 +39,7 @@ export class SvgWebSocket {
 
         this.audioController.onMicData((packet) => {
             if (this.hasJoined && this.ws && this.ws.readyState === WebSocket.OPEN
-                && this.ws.bufferedAmount < 19200) {
+                && (this.ws instanceof HttpVoiceSocket || this.ws.bufferedAmount < 19200)) {
                 this.ws.send(packet);
             }
         });
@@ -105,6 +105,7 @@ export class SvgWebSocket {
         const wsUrl = new URL("ws", pageUrl);
         wsUrl.protocol = protocol;
 
+        this.audioController.setPlaybackBuffer?.(useHttp ? 300 : 40);
         this.ws = useHttp ? new HttpVoiceSocket(wsUrl.href) : new WebSocket(wsUrl.href);
         const currentSocket = this.ws;
         this.ws.binaryType = "arraybuffer";
