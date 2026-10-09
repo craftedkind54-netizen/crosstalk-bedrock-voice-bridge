@@ -12,6 +12,13 @@ client:
   # Browser voice is always Bedrock-only. Floodgate or Geyser must verify the player.
   # The legacy requireBedrock option is ignored, including existing false values.
 
+  # Enable only behind an authenticated proxy whose backend is isolated from
+  # direct connections (e.g. Minekeep). Requires Bungee player-info forwarding.
+  # Matches BOTH the proxy's Floodgate UUID and its configured username prefix.
+  trusted-proxy-bedrock:
+    enabled: false
+    prefix: "."
+
   # default: true
   # Allows bedrock clients to open the SVG menu via emotes.
   # WARNING: Make sure off-hand-emote is disabled in Geyser to avoid conflicts.

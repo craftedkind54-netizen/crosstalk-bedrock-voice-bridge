@@ -71,3 +71,16 @@ proximity; group settings can intentionally change who hears whom.
 Built and unit-tested locally. A live Java-to-Bedrock call still requires the
 actual server/HTTPS setup and two logged-in Minecraft clients; that has not
 been verified on your server yet.
+
+
+### Minekeep and other proxy hosts
+If Bedrock players are online but code requests say to join from Bedrock, the host may run Geyser/Floodgate on its proxy without forwarding the Floodgate API data to Paper. For a trusted, authenticated proxy with the backend isolated from direct connections, set:
+
+```yaml
+client:
+  trusted-proxy-bedrock:
+    enabled: true
+    prefix: "."
+```
+
+This requires Bungee player-info forwarding, an online player with a Floodgate XUID UUID, and the configured server prefix. Players still enter their username without the prefix and must prove ownership with the private in-game code. Ordinary Java UUIDs are rejected. Leave this disabled on standalone or publicly accessible offline-mode backends. Linked Java UUIDs need the normal Floodgate API data forwarding. See [Floodgate proxy setup](https://geysermc.org/wiki/floodgate/api/).

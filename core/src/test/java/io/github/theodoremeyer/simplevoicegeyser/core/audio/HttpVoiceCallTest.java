@@ -32,13 +32,21 @@ class HttpVoiceCallTest {
         field.setAccessible(true); field.set(null, previousFloodgate);
     }
     @Test void authenticatedHttpsCallExchangesAudioAndCleansUpOnEndAndPlayerLeave() throws Exception {
+        runCall(false);
+    }
+    @Test void proxyBedrockWithoutLocalFloodgateSessionReceivesCodeAndExchangesAudio() throws Exception {
+        runCall(true);
+    }
+    private void runCall(boolean proxy) throws Exception {
         var core = new SvgCore(new SvgAudioListenerTest.FakePlatform() {
+            @Override public boolean isProxyForwardingEnabled() { return proxy; }
             @Override public File getDataFolder() { return folder.toFile(); }
             @Override public boolean isDependencyEnabled(String name) { return name.equals("floodgate"); }
         });
+        SvgCore.getConfig().getFile().set("client.trusted-proxy-bedrock.enabled", proxy);
         java.util.concurrent.atomic.AtomicReference<String> privateMessage = new java.util.concurrent.atomic.AtomicReference<>();
         var player = new SvgPlayer() {
-            final UUID uuid = UUID.randomUUID();
+            final UUID uuid = proxy ? new UUID(0, 123456789L) : UUID.randomUUID();
             public UUID getUniqueId() { return uuid; }
             public String getName() { return ".TestBedrock"; }
             public boolean hasPermission(String p) { return true; }
@@ -50,8 +58,8 @@ class HttpVoiceCallTest {
         var floodgatePlayer = fake(org.geysermc.floodgate.api.player.FloodgatePlayer.class,
                 (p,m,a) -> m.getName().equals("getUsername") ? "TestBedrock" : null);
         var floodgate = fake(org.geysermc.floodgate.api.FloodgateApi.class, (p,m,a) -> switch(m.getName()) {
-            case "getPlayer" -> player.getUniqueId().equals(a[0]) ? floodgatePlayer : null;
-            case "isFloodgatePlayer" -> player.getUniqueId().equals(a[0]);
+            case "getPlayer" -> !proxy && player.getUniqueId().equals(a[0]) ? floodgatePlayer : null;
+            case "isFloodgatePlayer" -> !proxy && player.getUniqueId().equals(a[0]);
             default -> null;
         });
         Field floodgateField = org.geysermc.floodgate.api.InstanceHolder.class.getDeclaredField("api");
@@ -61,6 +69,7 @@ class HttpVoiceCallTest {
         set(core, "playerVcPswd", passwords);
         passwords.setPassword(player, "local-test-only");
         SvgCore.getPlayerManager().addPlayer(player);
+        privateMessage.set(null);
         AtomicInteger uploaded = new AtomicInteger(), removed = new AtomicInteger();
         VoicechatConnection connection = fake(VoicechatConnection.class, (p,m,a) -> m.getReturnType() == boolean.class ? false : null);
         AudioSender sender = fake(AudioSender.class, (p,m,a) -> { if (m.getName().equals("send")) uploaded.incrementAndGet(); return m.getReturnType() == boolean.class ? true : null; });
@@ -85,6 +94,12 @@ class HttpVoiceCallTest {
         try {
             server.start();
             String base = "http://127.0.0.1:" + connector.getLocalPort() + "/api/voice/";
+            if (proxy) {
+                SvgCore.getConfig().getFile().set("client.trusted-proxy-bedrock.enabled", false);
+                assertEquals(400, post(base + "code", new JSONObject().put("username", "TestBedrock"), null).statusCode());
+                assertNull(privateMessage.get());
+                SvgCore.getConfig().getFile().set("client.trusted-proxy-bedrock.enabled", true);
+            }
             var sent = post(base + "code", new JSONObject().put("username", "TestBedrock"), null);
             assertEquals(200, sent.statusCode());
             assertFalse(sent.body().contains("code:"));

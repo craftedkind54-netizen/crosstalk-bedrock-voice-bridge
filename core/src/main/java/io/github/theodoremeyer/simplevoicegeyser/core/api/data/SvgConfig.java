@@ -41,6 +41,12 @@ public final class SvgConfig {
     public final ConfigKey<Integer> IDLE_TIMEOUT =
             new ConfigKey <>(this, "client.idletimeout", 2);
 
+    public final ConfigKey<Boolean> TRUST_PROXY_BEDROCK =
+            new ConfigKey<>(this, "client.trusted-proxy-bedrock.enabled", false);
+
+    public final ConfigKey<String> PROXY_BEDROCK_PREFIX =
+            new ConfigKey<>(this, "client.trusted-proxy-bedrock.prefix", ".");
+
     public final ConfigKey<Boolean> USE_EMOTE =
             new ConfigKey <>(this, "client.useEmoteForSVG", true);
 
@@ -110,6 +116,8 @@ public final class SvgConfig {
             VC_TIMEOUT,
             IDLE_TIMEOUT,
             USE_EMOTE,
+            TRUST_PROXY_BEDROCK,
+            PROXY_BEDROCK_PREFIX,
             WEB_CHAT_ENABLED,
             CLIENT_ALLOWED_TYPES_BLACKLIST,
             CLIENT_ALLOWED_TYPES_LIST,

@@ -39,6 +39,8 @@ tasks.test {
 }
 
 tasks.processResources {
+    inputs.property("gitCommit", currentGitCommit())
+    inputs.property("projectVersion", project.version.toString())
     from(sourceSets.main.resources.srcDirs)
 
     from("web") {
