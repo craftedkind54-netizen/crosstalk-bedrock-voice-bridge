@@ -41,7 +41,19 @@ test("full browser call flow handles denied mic, authentication, mute, and end w
     };
     await import("../core/web/js/v2.js");
     element("username").value = ".TestPlayer";
-    element("password").value = "test-only-password";
+    element("code").value = "123456";
+    let requests = 0;
+    globalThis.fetch = async (url, options) => {
+        requests++;
+        assert.match(String(url), /api\/voice\/code$/);
+        assert.deepEqual(JSON.parse(options.body), {username: ".TestPlayer"});
+        return {ok:true, json:async()=>({message:"Code sent privately in Minecraft."})};
+    };
+    await element("send-code").listeners.click();
+    assert.equal(requests, 1);
+    assert.equal(ws, undefined);
+    assert.match(element("status").textContent, /Code sent/);
+    element("code").value="123456";
     const submit = () => element("call-form").listeners.submit({ preventDefault() {} });
     await submit();
     assert.match(element("error").textContent, /Microphone access was blocked/);
@@ -54,7 +66,7 @@ test("full browser call flow handles denied mic, authentication, mute, and end w
     assert.equal(element("connection-pill").textContent, "Offline");
     await ws.onmessage({ data: JSON.stringify({ type: "status", message: "Connected as .TestPlayer." }) });
     assert.equal(element("connection-pill").textContent, "In call");
-    assert.equal(element("password").value, "");
+    assert.equal(element("code").value, "");
     element("mute").listeners.click();
     assert.equal(element("mic-text").textContent, "Microphone muted");
     element("end-call").listeners.click();

@@ -45,9 +45,9 @@ export class SvgWebSocket {
         });
     }
 
-    connect(username, password, onStatusChange) {
+    connect(username, code, onStatusChange) {
         this.disconnect();
-        this.lastCredentials = { username, password };
+        this.lastCredentials = { username, code };
         this.#resetState();
         this.addEventListener("statusChange", onStatusChange);
         this.#createSocket();

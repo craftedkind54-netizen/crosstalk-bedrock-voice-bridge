@@ -77,6 +77,7 @@ public final class PlayerManager {
      * @param player the player to remove
      */
     public void removePlayer(SvgPlayer player) {
+        io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.JettyWebSocket.AUTHENTICATOR.loginCodes.invalidate(player.getUniqueId());
         SvgCore.getConnectionManager().disconnect(
                 player.getUniqueId(),
                 ConnectionStates.DisconnectCodes.PLAYER_LEAVE.getCode(),

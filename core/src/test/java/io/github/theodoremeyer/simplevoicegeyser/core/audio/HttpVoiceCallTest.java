@@ -36,6 +36,7 @@ class HttpVoiceCallTest {
             @Override public File getDataFolder() { return folder.toFile(); }
             @Override public boolean isDependencyEnabled(String name) { return name.equals("floodgate"); }
         });
+        java.util.concurrent.atomic.AtomicReference<String> privateMessage = new java.util.concurrent.atomic.AtomicReference<>();
         var player = new SvgPlayer() {
             final UUID uuid = UUID.randomUUID();
             public UUID getUniqueId() { return uuid; }
@@ -44,7 +45,7 @@ class HttpVoiceCallTest {
             public boolean isOnline() { return true; }
             public Object getPlayer() { return null; }
             public void chat(String m) {}
-            public void sendMessage(String m) {}
+            public void sendMessage(String m) { privateMessage.set(m); }
         };
         var floodgatePlayer = fake(org.geysermc.floodgate.api.player.FloodgatePlayer.class,
                 (p,m,a) -> m.getName().equals("getUsername") ? "TestBedrock" : null);
@@ -84,11 +85,18 @@ class HttpVoiceCallTest {
         try {
             server.start();
             String base = "http://127.0.0.1:" + connector.getLocalPort() + "/api/voice/";
-            var login = new JSONObject().put("username", "TestBedrock").put("password", "local-test-only").put("build", SvgCore.BUILD_ID);
+            var sent = post(base + "code", new JSONObject().put("username", "TestBedrock"), null);
+            assertEquals(200, sent.statusCode());
+            assertFalse(sent.body().contains("code:"));
+            String code = privateMessage.get().split("code: ")[1].substring(0,6);
+            assertFalse(sent.body().contains(code));
+            assertEquals(400, post(base + "code", new JSONObject().put("username", "TestBedrock"), null).statusCode());
+            assertEquals(403, post(base + "join", new JSONObject().put("username", "TestBedrock").put("password", "local-test-only"), null).statusCode());
+            var login = new JSONObject().put("username", "TestBedrock").put("code", code).put("build", SvgCore.BUILD_ID);
             var wrongCase = post(base + "join", new JSONObject(login.toString()).put("username", "testbedrock"), null);
             assertEquals(403, wrongCase.statusCode());
             assertFalse(new JSONObject(wrongCase.body()).has("token"));
-            var denied = post(base + "join", new JSONObject(login.toString()).put("password", "wrong-pass"), null);
+            var denied = post(base + "join", new JSONObject(login.toString()).put("code", "wrong!"), null);
             assertEquals(403, denied.statusCode()); assertFalse(new JSONObject(denied.body()).has("token"));
             var joined = post(base + "join", login, null);
             assertEquals(200, joined.statusCode(), joined.body());
@@ -104,6 +112,10 @@ class HttpVoiceCallTest {
             post(base + "close", new JSONObject(), token);
             assertNull(SvgCore.getConnectionManager().get(player.getUniqueId())); assertEquals(1, removed.get());
             assertEquals(401, post(base + "exchange", new JSONObject().put("audio", new JSONArray()), token).statusCode());
+            assertEquals(403, post(base + "join", login, null).statusCode()); // single-use
+            io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.JettyWebSocket.AUTHENTICATOR.loginCodes.invalidate(player.getUniqueId());
+            assertEquals(200, post(base + "code", new JSONObject().put("username", "TestBedrock"), null).statusCode());
+            login.put("code", privateMessage.get().split("code: ")[1].substring(0,6));
             token = new JSONObject(post(base + "join", login, null).body()).getString("token");
             SvgCore.getPlayerManager().removePlayer(player);
             var left = post(base + "exchange", new JSONObject().put("audio", new JSONArray()), token);

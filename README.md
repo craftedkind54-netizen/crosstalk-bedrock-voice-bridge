@@ -2,7 +2,7 @@
 
 A Paper server plugin with an embedded browser voice page. Java players keep
 using Simple Voice Chat. Bedrock players join the same voice system from a
-browser: username, an in-game voice password, **Start call**.
+browser: username, a one-time code delivered privately in Minecraft, **Start call**.
 
 **Status: compiled development build, with automated tests. Not yet verified
 in a live Java/Bedrock call on the target server.**
@@ -13,7 +13,7 @@ in a live Java/Bedrock call on the target server.**
 
 - A Paper plugin, including its website; no separate web application server.
 - Proximity routing through Simple Voice Chat's player audio sender/listener APIs.
-- Authentication tied to an online, verified Bedrock account and an in-game password.
+- Authentication tied to an online, verified Bedrock account and a one-time in-game confirmation code.
 - Browser login requires Floodgate or Geyser verification; Java players use the in-game mod.
   The legacy `client.requireBedrock: false` setting no longer permits Java browser login.
 - Start call, mute, End call, and actionable connection/microphone errors.
@@ -50,7 +50,7 @@ bash gradlew :core:test :spigot:shadowJar --no-daemon
 
 Windows: replace `bash gradlew` with `gradlew.bat`.
 
-Output: `spigot/build/libs/CrossTalk-Paper-0.1.4-crosstalk.3.jar`.
+Output: `spigot/build/libs/CrossTalk-Paper-0.1.4-crosstalk.4.jar`.
 No npm install is needed: the browser tests use Node's built-in test runner.
 The Gradle wrapper downloads the required build dependencies.
 

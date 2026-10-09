@@ -3,7 +3,6 @@ package io.github.theodoremeyer.simplevoicegeyser.core.server.connection.auth;
 import de.maxhenkel.voicechat.api.VoicechatConnection;
 import io.github.theodoremeyer.simplevoicegeyser.core.SvgCore;
 import io.github.theodoremeyer.simplevoicegeyser.core.api.sender.SvgPlayer;
-import io.github.theodoremeyer.simplevoicegeyser.core.data.PlayerVcPswd;
 import io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook;
 
 import java.time.Duration;
@@ -14,7 +13,7 @@ import java.util.UUID;
  * Handles websocket authentication and connection validation.
  * <p>
  * This class is responsible for:
- * - password validation
+ * - one-time code validation
  * - bedrock enforcement
  * - permission validation
  * - voice chat compatibility checks
@@ -28,6 +27,7 @@ public final class ConnectionAuthenticator {
      * Authentication rate limiter.
      */
     private final AuthRateLimiter authRateLimiter;
+    public final LoginCodes loginCodes = new LoginCodes();
 
     /**
      * Creates the authenticator.
@@ -49,12 +49,12 @@ public final class ConnectionAuthenticator {
      * Exceptions are reserved for unexpected server faults.
      *
      * @param username username
-     * @param password password
+     * @param code one-time in-game code
      * @return auth response
      */
     public AuthResponse authenticate(
             String username,
-            String password
+            String code
     ) {
 
         try {
@@ -76,25 +76,11 @@ public final class ConnectionAuthenticator {
 
                 return AuthResponse.failure(
                         "Too many failed login attempts. " +
-                                "Reset your password in-game with /svg pswd [password]."
+                                "Wait a few minutes, then request a new login code."
                 );
             }
 
-            PlayerVcPswd passwordManager = SvgCore.getPasswordManager();
-
-            // Generic auth failure response
-            if (uuid == null ||
-                    !passwordManager.validatePassword(
-                            uuid,
-                            password
-                    )) {
-
-                authRateLimiter.recordFailure(authKey);
-
-                return AuthResponse.failure(
-                        "Access denied. Stay online in Minecraft Bedrock, enter your exact Bedrock username without a prefix, and use the voice password set with /svg pswd."
-                );
-            }
+            if (uuid == null) return AuthResponse.failure("Join Minecraft from Bedrock and use your exact Bedrock username without the prefix.");
 
             AuthResponse bedrockResult =
                     validateBedrock(uuid, authKey);
@@ -128,6 +114,10 @@ public final class ConnectionAuthenticator {
                 return voiceChatResult;
             }
 
+            if (!loginCodes.consume(player, code)) {
+                authRateLimiter.recordFailure(authKey);
+                return AuthResponse.failure("Invalid, expired, or already used code. Request a code on the website and check your private Minecraft chat.");
+            }
             authRateLimiter.reset(authKey);
 
             return AuthResponse.success(
@@ -143,6 +133,19 @@ public final class ConnectionAuthenticator {
                     "Internal server error."
             );
         }
+    }
+
+    public AuthResponse requestCode(String username) {
+        UUID uuid = BedrockLoginResolver.resolve(normalizeUsername(username),
+                SvgCore.getPlayerManager().getAllPlayers(), GeyserHook::bedrockUsername);
+        if (uuid == null || !Boolean.TRUE.equals(GeyserHook.isBedrock(uuid)))
+            return AuthResponse.failure("Join Minecraft from Bedrock first, then enter your exact Bedrock username without the prefix.");
+        SvgPlayer player = SvgCore.getPlayerManager().getPlayer(uuid);
+        if (player == null || !player.isOnline() || !player.hasPermission("svg.vc.join"))
+            return AuthResponse.failure("Your account cannot join browser voice chat.");
+        if (!loginCodes.send(player))
+            return AuthResponse.failure("A code was already requested. Check Minecraft chat, or wait two minutes for a new code.");
+        return AuthResponse.ok();
     }
 
     /**

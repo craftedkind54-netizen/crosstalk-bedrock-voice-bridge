@@ -86,6 +86,17 @@ public final class HttpVoiceServlet extends HttpServlet {
         if (bytes.length > MAX_BODY) { reply(resp, 413, error("Request too large.")); return; }
         try {
             JSONObject body = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+            if ("/code".equals(req.getPathInfo())) {
+                String name = body.optString("username", "").trim();
+                if (name.isEmpty() || name.length()>64) { reply(resp,400,error("Enter your Bedrock username.")); return; }
+                if (!joins.tryAcquire()) { reply(resp,429,error("Try again shortly.")); return; }
+                try {
+                    var result = JettyWebSocket.AUTHENTICATOR.requestCode(name);
+                    reply(resp,result.success()?200:400,result.success()
+                            ? new JSONObject().put("message","Code sent privately in Minecraft. It expires in 2 minutes.") : error(result.message()));
+                } finally { joins.release(); }
+                return;
+            }
             if ("/join".equals(req.getPathInfo())) { join(req, resp, body); return; }
             if (!Set.of("/exchange", "/close").contains(String.valueOf(req.getPathInfo()))) {
                 reply(resp, 404, error("Unknown voice endpoint.")); return;
@@ -125,7 +136,7 @@ public final class HttpVoiceServlet extends HttpServlet {
     }
 
     private void join(HttpServletRequest req, HttpServletResponse resp, JSONObject body) throws IOException {
-        if (body.optString("username").length() > 64 || body.optString("password").length() > 32) {
+        if (body.optString("username").length() > 64 || body.optString("code").length() > 6) {
             reply(resp, 400, error("Invalid login details.")); return;
         }
         if (!joins.tryAcquire()) { reply(resp, 503, error("Voice server busy. Try again shortly.")); return; }

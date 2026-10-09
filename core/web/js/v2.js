@@ -1,5 +1,5 @@
 import { SvgAudio } from "./audio/audio.js";
-import { SvgWebSocket } from "./websocket.js?crosstalk=2";
+import { SvgWebSocket } from "./websocket.js?crosstalk=4";
 
 window.PROJECT_VERSION = document.querySelector('meta[name="project-version"]').content;
 window.BUILD_ID = document.querySelector('meta[name="build-id"]').content;
@@ -55,7 +55,7 @@ socket.addEventListener("statusChange", status => {
         }, 25000);
         busy = false;
         render(true);
-        el("password").value = "";
+        el("code").value = "";
         el("status").textContent = `Connected as ${status.username}. Talk to nearby players.`;
     } else if (joined || busy) {
         end("Disconnected. Your microphone is off. Start a new call to reconnect.");
@@ -66,9 +66,31 @@ socket.addEventListener("statusChange", status => {
 socket.addEventListener("message", data => {
     if (data.type === "json" && (data.packetType === "error" || data.fatalAuthError)) {
         end("Could not join. Check the message below, then try again.");
-        showError(data.msg || "Check that you are online and that your voice password is correct.");
+        showError(data.msg || "Request a new code and check your private Minecraft chat.");
     }
 }, true);
+
+el("send-code").addEventListener("click", async () => {
+    if (busy || joined || el("send-code").disabled) return;
+    const username = el("username").value.trim();
+    if (!username) { showError("Enter your Bedrock username first."); return; }
+    if (!window.isSecureContext) { showError("Use the HTTPS voice website."); return; }
+    el("send-code").disabled = true;
+    showError("");
+    try {
+        const response = await fetch(new URL("api/voice/code", window.location.href), {
+            method: "POST", credentials: "omit", cache: "no-store",
+            headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }),
+            signal: AbortSignal.timeout(10000)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not send a code.");
+        el("code").value = "";
+        el("status").textContent = result.message;
+        el("code").focus?.();
+    } catch (error) { showError(error.message || "Could not send a code. Try again."); }
+    finally { el("send-code").disabled = false; }
+});
 
 el("call-form").addEventListener("submit", async event => {
     event.preventDefault();
@@ -103,7 +125,7 @@ el("call-form").addEventListener("submit", async event => {
         el("mute").textContent = "Mute microphone";
         el("mute").setAttribute("aria-pressed", "false");
         el("mic-text").textContent = "Microphone on";
-        socket.connect(el("username").value.trim(), el("password").value, () => {});
+        socket.connect(el("username").value.trim(), el("code").value, () => {});
         socket.stopReconnection();
         el("status").textContent = "Checking your in-game account…";
         timeout = setTimeout(() => {
