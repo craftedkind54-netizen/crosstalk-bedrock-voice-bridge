@@ -8,7 +8,7 @@ test("full browser call flow handles denied mic, authentication, mute, and end w
             value: "", hidden: false, disabled: false, textContent: "", listeners: {},
             classList: { toggle() {}, remove() {} },
             addEventListener(type, fn) { this.listeners[type] = fn; },
-            setAttribute() {},
+            setAttribute() {}, replaceChildren() {}, append() {},
         });
         return elements.get(id);
     }

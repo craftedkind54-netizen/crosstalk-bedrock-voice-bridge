@@ -140,8 +140,18 @@ public final class HttpVoiceServlet extends HttpServlet {
                     if (pcm.length != 1920) throw new IllegalArgumentException("Invalid PCM frame");
                     decoded.add(pcm);
                 }
+                JSONArray controls = body.optJSONArray("controls");
+                if (controls != null) {
+                    if (controls.length() > 4) throw new IllegalArgumentException("Too many controls");
+                    for (int i=0; i<controls.length(); i++) {
+                        var control = controls.getJSONObject(i);
+                        if (!"groups".equals(control.optString("type")) || control.toString().length() > 2048)
+                            throw new IllegalArgumentException("Invalid control");
+                    }
+                }
                 call.lastSeen = System.nanoTime();
                 if (call.transport.isOpen()) {
+                    if (controls != null) for (int i=0; i<controls.length(); i++) call.protocol.onMessage(controls.getJSONObject(i).toString());
                     for (byte[] pcm : decoded) call.incoming.add(pcm, System.nanoTime());
                 }
                 reply(resp, 200, call.transport.drain());

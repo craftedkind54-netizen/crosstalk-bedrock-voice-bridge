@@ -9,7 +9,6 @@ import io.github.theodoremeyer.simplevoicegeyser.core.api.chat.SvgColor;
 import io.github.theodoremeyer.simplevoicegeyser.core.api.sender.SvgPlayer;
 import io.github.theodoremeyer.simplevoicegeyser.core.svc.VoiceChatBridge;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,7 @@ public final class GroupManager {
      * Interface to group system
      */
     private final VoiceChatBridge bridge;
+    public final BrowserGroups browser = new BrowserGroups();
 
     /**
      * Groups that are listed/Available
@@ -158,41 +158,7 @@ public final class GroupManager {
             return false;
         }
 
-        String groupPassword = null;
-
-        try {
-            Field groupField = group.getClass().getDeclaredField("group");
-            groupField.setAccessible(true);
-            Object groupObject = groupField.get(group);
-
-            Field passwordField = groupObject.getClass()
-                    .getDeclaredField("password");
-            passwordField.setAccessible(true);
-
-            groupPassword = (String) passwordField.get(groupObject);
-
-        } catch (Throwable e) {
-            SvgCore.getLogger().warning("[SVG] Failed to reflect password of group '"
-                    + group.getName() + "' (" + group.getId() + "): " + e.getMessage());
-        }
-
-        // Debug getLogger password state
-        SvgCore.getLogger().debug("[GROUPS]: svgPlayer: " + svgPlayer.getName()
-                + " | Group: " + groupName
-                + " | Provided Password: " + password
-                + " | Actual Password: " + groupPassword);
-
-        // Handle password check safely
-        if (groupPassword != null) {
-
-            if (password == null) {
-                return false;
-            }
-
-            if (!groupPassword.equals(password)) {
-                return false;
-            }
-        }
+        if (!BrowserGroups.passwordMatches(group, password)) return false;
 
         // Leave previous group
         if (connection.isInGroup()) {

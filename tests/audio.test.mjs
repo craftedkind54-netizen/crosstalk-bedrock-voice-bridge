@@ -97,3 +97,29 @@ test("microphone hangover retains quiet word endings", () => {
     for(let i=0;i<25;i++)p.process([[new Float32Array(128)]]);
     assert.equal(p.last.speech,false);
 });
+
+test("HTTPS startup retains a real cushion when a full batch arrives at once", () => {
+    const p=processor(); p.port.onmessage({data:{type:"buffer-ms",milliseconds:300}});
+    enqueue(p,"alice",0.25,14400);
+    for(let i=0;i<100;i++) assert.ok(render(p)[0].every(v=>v===0));
+    let started=false, gap=false, played=0;
+    // Next batch arrives 400ms after the first, then another 300ms later.
+    for(let i=100;i<450;i++) {
+        if(i===150 || i===262) enqueue(p,"alice",0.25,14400);
+        const out=render(p)[0]; const count=out.filter(v=>v!==0).length;
+        if(count) started=true;
+        if(started && played < 3*14400 && count===0) gap=true;
+        played+=count;
+    }
+    assert.equal(gap,false); assert.equal(played,3*14400);
+});
+test("microphone preroll preserves quiet starts, stays bounded, and never leaks across mute", () => {
+    const a=new SvgAudio(), sent=[]; a.onMicData(b=>sent.push(new Int16Array(b)[0]));
+    for(let i=0;i<10;i++)a.sendMicPacket(new Int16Array(960).fill(i),"voice",false,false);
+    a.sendMicPacket(new Int16Array(960).fill(10),"voice",true,false);
+    assert.deepEqual(sent,[5,6,7,8,9,10]);
+    a.sendMicPacket(new Int16Array(960).fill(11),"voice",false,false);
+    a.toggleMute(); a.sendMicPacket(new Int16Array(960).fill(12),"voice",true,false);
+    a.toggleMute(); a.sendMicPacket(new Int16Array(960).fill(13),"voice",true,false);
+    assert.deepEqual(sent,[5,6,7,8,9,10,13]);
+});

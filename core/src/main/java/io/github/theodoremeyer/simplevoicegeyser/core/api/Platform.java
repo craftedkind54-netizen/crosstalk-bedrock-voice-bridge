@@ -17,6 +17,9 @@ public interface Platform {
      */
     void platformDisable();
 
+    /** Execute player/group changes on the platform game thread. */
+    default void runTask(Runnable task) { task.run(); }
+
     /**
      * The Prefix for Logging
      * @return the prefix

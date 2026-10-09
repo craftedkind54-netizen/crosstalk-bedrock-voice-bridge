@@ -92,6 +92,11 @@ public class SvgPlugin extends JavaPlugin implements Platform {
         return Bukkit.spigot().getConfig().getBoolean("settings.bungeecord", false);
     }
 
+    @Override public void runTask(Runnable task) {
+        if (Bukkit.isPrimaryThread()) task.run();
+        else Bukkit.getScheduler().runTask(this, task);
+    }
+
     //--------------
     // Platform Impl
     //--------------

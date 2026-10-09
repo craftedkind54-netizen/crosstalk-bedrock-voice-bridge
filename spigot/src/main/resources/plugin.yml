@@ -34,9 +34,14 @@ permissions:
     description: Allows player to use voice chat group creation
     default: true
     children:
+      svg.vc.group.join: true
       svg.vc.group.create: true
       svg.vc.group.type: true
       svg.vc.group.type.isolated: true
+
+  svg.vc.group.join:
+    description: Allows players to join groups and accept invitations
+    default: true
 
   svg.vc.group.create:
     description: "Allows the player to create voice chat groups"

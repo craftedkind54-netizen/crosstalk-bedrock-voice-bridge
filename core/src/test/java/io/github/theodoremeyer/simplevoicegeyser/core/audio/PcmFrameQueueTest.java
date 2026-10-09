@@ -5,9 +5,9 @@ class PcmFrameQueueTest {
     @Test void pacesBatchesWithoutDroppingWordsOrCatchupBursts() {
         var q = new PcmFrameQueue();
         for(int i=0;i<15;i++)q.add(new byte[]{(byte)i},0);
-        assertNull(q.poll(59_000_000L));
+        assertNull(q.poll(159_000_000L));
         for(int i=0;i<15;i++) {
-            long time=60_000_000L+i*20_000_000L;
+            long time=160_000_000L+i*20_000_000L;
             assertArrayEquals(new byte[]{(byte)i},q.poll(time));
             assertNull(q.poll(time));
         }
@@ -16,7 +16,7 @@ class PcmFrameQueueTest {
     @Test void queueIsBoundedExpiresStaleAudioAndClearsOnClose() {
         var q = new PcmFrameQueue();
         for(int i=0;i<60;i++)q.add(new byte[]{(byte)i},0);
-        assertArrayEquals(new byte[]{20},q.poll(60_000_000L));
+        assertArrayEquals(new byte[]{20},q.poll(160_000_000L));
         assertNull(q.poll(1_100_000_000L));
         q.add(new byte[]{1},2_000_000_000L);
         q.clear();

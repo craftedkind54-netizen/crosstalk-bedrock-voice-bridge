@@ -8,6 +8,7 @@ export class HttpVoiceSocket {
         this.readyState = 0;
         this.bufferedAmount = 0;
         this.queue = [];
+        this.controls = [];
         this.token = null;
         this.joining = false;
         queueMicrotask(() => {
@@ -25,6 +26,7 @@ export class HttpVoiceSocket {
                 this.joining = true;
                 void this.join(packet);
             }
+            if (packet.type === "groups" && this.token && this.controls.length < 4) this.controls.push(packet);
             // HTTPS exchanges provide keepalive; this transport always uses PCM.
             return;
         }
@@ -91,7 +93,7 @@ export class HttpVoiceSocket {
         const audio = this.queue.splice(0).filter(frame => Date.now() - frame.time < 1000).map(frame => frame.data);
         this.bufferedAmount = 0;
         try {
-            await this.deliver(await this.request("exchange", { audio }));
+            await this.deliver(await this.request("exchange", { audio, controls: this.controls.splice(0) }));
             if (this.readyState === 1) this.pollTimer = setTimeout(() => void this.poll(), Math.max(0, 20 - (Date.now() - started)));
         } catch (error) { this.fail(error.name === "AbortError" ? "Voice connection timed out. Start a new call." : error.message); }
     }

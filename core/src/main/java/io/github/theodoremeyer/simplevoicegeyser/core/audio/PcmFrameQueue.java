@@ -9,7 +9,7 @@ public final class PcmFrameQueue {
     private final ArrayDeque<Frame> frames = new ArrayDeque<>();
     private long next;
     public void add(byte[] pcm, long now) {
-        if (frames.isEmpty()) next = now + 60_000_000L;
+        if (frames.isEmpty()) next = now + 160_000_000L;
         while (frames.size() >= 40) frames.removeFirst();
         frames.addLast(new Frame(pcm.clone(), now));
     }

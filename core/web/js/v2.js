@@ -1,11 +1,13 @@
-import { SvgAudio } from "./audio/audio.js?crosstalk=6";
-import { SvgWebSocket } from "./websocket.js?crosstalk=6";
+import { setupGroups } from "./groups.js?crosstalk=7";
+import { SvgAudio } from "./audio/audio.js?crosstalk=7";
+import { SvgWebSocket } from "./websocket.js?crosstalk=7";
 
 window.PROJECT_VERSION = document.querySelector('meta[name="project-version"]').content;
 window.BUILD_ID = document.querySelector('meta[name="build-id"]').content;
 const el = id => document.getElementById(id);
 const audio = new SvgAudio();
 const socket = new SvgWebSocket(audio);
+const stopGroups = setupGroups(socket, document);
 let generation = 0;
 let timeout;
 let heartbeat;
@@ -35,6 +37,7 @@ function render(connected) {
 
 function end(message = "Call ended. Your microphone is off.") {
     generation++;
+    stopGroups();
     clearTimeout(timeout);
     clearInterval(heartbeat);
     socket.disconnect();

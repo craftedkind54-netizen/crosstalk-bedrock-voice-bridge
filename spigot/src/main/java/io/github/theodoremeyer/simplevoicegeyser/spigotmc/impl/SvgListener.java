@@ -12,6 +12,32 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.util.UUID;
 
 public class SvgListener implements Listener {
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onVoiceCommand(org.bukkit.event.player.PlayerCommandPreprocessEvent event) {
+        String[] parts = event.getMessage().trim().split("\\s+");
+        if (parts.length != 3 || !(parts[0].equalsIgnoreCase("/voicechat") || parts[0].equalsIgnoreCase("/voicechat:voicechat"))) return;
+        var manager = SvgCore.getGroupManager();
+        if (manager == null) return;
+        var sender = SvgCore.getPlayerManager().getPlayer(event.getPlayer().getUniqueId());
+        if (sender == null) return;
+        if (parts[1].equalsIgnoreCase("join") && manager.browser.hasInvite(sender, parts[2])) {
+            event.setCancelled(true);
+            try { manager.browser.accept(sender, parts[2]); sender.sendMessage("[CrossTalk] Voice group invite accepted."); }
+            catch (IllegalArgumentException e) { sender.sendMessage("[CrossTalk] " + e.getMessage()); }
+        } else if (parts[1].equalsIgnoreCase("invite")) {
+            for (var target : SvgCore.getPlayerManager().getAllPlayers()) {
+                String bedrockName = io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.bedrockUsername(target.getUniqueId());
+                if (!target.getName().equals(parts[2]) && !parts[2].equals(bedrockName)) continue;
+                if (!io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(target.getUniqueId())
+                        && !io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(sender.getUniqueId())) return;
+                event.setCancelled(true);
+                try { sender.sendMessage("[CrossTalk] " + manager.browser.invite(sender, target)); }
+                catch (IllegalArgumentException e) { sender.sendMessage("[CrossTalk] " + e.getMessage()); }
+                return;
+            }
+        }
+    }
+
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
