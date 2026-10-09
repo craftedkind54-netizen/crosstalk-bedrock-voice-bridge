@@ -12,6 +12,7 @@ export class SvgAudio {
 
     constructor() {
         this.micHandler = null;
+        this.preRoll = [];
         this.microphoneStream = null;
         this.micNode = null;
         this.micSource = null;
@@ -41,7 +42,7 @@ export class SvgAudio {
     }
 
     resolveAudioModuleUrl(moduleName) {
-        return new URL(moduleName + "?crosstalk=6", import.meta.url).href;
+        return new URL(moduleName + "?crosstalk=7", import.meta.url).href;
     }
 
     async initAudio() {
@@ -199,9 +200,19 @@ export class SvgAudio {
 
             this.available -= SvgAudio.PACKET_SIZE;
 
-            if (this.shouldSendPacket(mode, packetHasSpeech, pttActive)) {
-                this.micHandler?.(packet.slice().buffer);
-            }
+            this.sendMicPacket(packet, mode, packetHasSpeech, pttActive);
+        }
+    }
+
+    sendMicPacket(packet, mode, speech, pttActive) {
+        if (this.muted || mode !== "voice") this.preRoll = [];
+        if (this.shouldSendPacket(mode, speech, pttActive)) {
+            for (const earlier of this.preRoll) this.micHandler?.(earlier.buffer);
+            this.preRoll = [];
+            this.micHandler?.(packet.buffer);
+        } else if (!this.muted && mode === "voice") {
+            this.preRoll.push(packet);
+            if (this.preRoll.length > 5) this.preRoll.shift();
         }
     }
 
@@ -235,6 +246,7 @@ export class SvgAudio {
         this.readIndex = 0;
         this.available = 0;
         this.speechBuffer.fill(0);
+        this.preRoll = [];
 
         if (this.micIndicator) {
             this.micIndicator.classList.remove("active");
@@ -243,6 +255,8 @@ export class SvgAudio {
 
     toggleMute() {
         this.muted = !this.muted;
+        this.preRoll = [];
+        this.available = 0; this.readIndex = this.writeIndex;
 
         if (this.muted && this.micIndicator) {
             this.micIndicator.classList.remove("active");
@@ -279,6 +293,7 @@ export class SvgAudio {
         this.readIndex = 0;
         this.available = 0;
         this.speechBuffer.fill(0);
+        this.preRoll = [];
     }
 
     #normalizeAudioPacket(input) {

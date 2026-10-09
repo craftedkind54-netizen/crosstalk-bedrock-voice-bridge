@@ -32,6 +32,12 @@ public final class JettyWebSocket {
 
     private VoiceTransport session;
     private SvgConnection connection;
+    private long groupRequestTime;
+    public synchronized boolean allowGroupRequest() {
+        long now = System.nanoTime();
+        if (now - groupRequestTime < 200_000_000L) return false;
+        groupRequestTime = now; return true;
+    }
     private long binaryFrameCount = 0;
     private long binaryByteCount = 0;
     private long controlMessageCount = 0;

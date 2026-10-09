@@ -54,7 +54,9 @@ class SpeakerProcessor extends AudioWorkletProcessor {
                 stream.waiting += left.length;
                 // HTTPS arrives in batches: retain a playout cushion between responses.
                 // A timeout also plays a short word that never fills the cushion.
-                if (stream.available < this.target && stream.waiting < this.target) continue;
+                // Large HTTPS batches must still wait: starting immediately when a batch
+                // fills the target leaves no reserve for a later, slower response.
+                if (stream.waiting < this.target && (this.target > 1920 || stream.available < this.target)) continue;
                 stream.started = true;
             }
             for (let i = 0; i < left.length && stream.available; i++) {

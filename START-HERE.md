@@ -6,7 +6,7 @@ It is a customized MIT-licensed build of SimpleVoice-Geyser, not a Bedrock add-o
 ## Server owner: one-time setup
 
 1. Stop your Paper server and back up its plugins/configuration.
-2. Put `CrossTalk-Paper-0.1.4-crosstalk.4.jar` in `plugins/`.
+2. Put `CrossTalk-Paper-0.1.4-crosstalk.7.jar` in `plugins/`.
    If SimpleVoice-Geyser is already installed, replace it: do not run both.
 3. Keep **Simple Voice Chat's Bukkit/Paper plugin** on the server, plus your
    existing Geyser/Floodgate setup. Your `voicechat-fabric-1.21.11-2.6.22.jar`
@@ -45,6 +45,25 @@ Java players with Simple Voice Chat installed use the in-game mod normally.
 Browser users must stay logged into Minecraft. Leaving/disconnecting stops
 the browser microphone. A username alone cannot authorize a voice session.
 
+## Groups and invitations
+
+After starting a call, use **Voice groups** on the website. Choose an available
+group and press **Join group**, or open **Create a group**. A group password is
+optional and separate from the Minecraft login code. Use **Leave group** to
+return to proximity chat.
+
+Members can select an online player and press **Send group invite**. Invitations
+appear on the recipient's website and in Minecraft chat, expire after five
+minutes, and can only be accepted by that recipient. An invitation grants entry
+to that group without disclosing its password. Java players can invite Bedrock
+players with `/voicechat invite <playername>`; Bedrock recipients accept on the
+website. Java recipients of website invites can type the exact
+`/voicechat join <group-id>` command from the invitation in Minecraft.
+
+Group lists and invites refresh every five seconds. Groups use Simple Voice
+Chat's existing audio routing. Server settings and group permissions still
+apply. A failed group action leaves the voice call connected.
+
 ## First live test
 
 Use one Java player with the mod and one Bedrock player with the browser.
@@ -57,7 +76,7 @@ proximity; group settings can intentionally change who hears whom.
 ## If something does not connect
 
 - Website unreachable: verify the extra TCP port, bind address, DNS and proxy.
-- Page works but call fails: the proxy must forward `/ws` WebSocket upgrades.
+- Page works but call fails: check the proxy forwards `/ws` or `/api/voice/`. CrossTalk falls back to HTTPS when WebSocket upgrades are unavailable.
 - Microphone blocked: use HTTPS and allow this site's microphone permission.
 - Invalid login: stay online from Bedrock and match your username's capitalization.
   Request a fresh code and read your private Minecraft chat. Expired or used codes cannot reconnect.
@@ -68,9 +87,8 @@ proximity; group settings can intentionally change who hears whom.
 - Java players cannot hear each other either: fix Simple Voice Chat's UDP port
   first. It must be separate from Geyser's UDP port.
 
-Built and unit-tested locally. A live Java-to-Bedrock call still requires the
-actual server/HTTPS setup and two logged-in Minecraft clients; that has not
-been verified on your server yet.
+Automated tests cover audio delivery, login, and groups. Verify real speech with
+two Minecraft clients after updating; network conditions can still affect quality.
 
 
 ### Minekeep and other proxy hosts

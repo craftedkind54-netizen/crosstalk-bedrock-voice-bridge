@@ -89,7 +89,9 @@ test('a 350ms round trip preserves all microphone frames and adds no fixed 60ms 
     const socket=new HttpVoiceSocket('wss://voice.example.com/ws');
     try {
         await tick(); socket.token='test-token';
+        socket.send(JSON.stringify({type:'groups',action:'list'}));
         const first=socket.poll();
+        assert.deepEqual(bodies[0].controls,[{type:'groups',action:'list'}]);
         for(let i=0;i<17;i++){now=i*20;socket.send(new ArrayBuffer(1920));}
         now=350;
         pending(response({open:true}));

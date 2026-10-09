@@ -5,7 +5,7 @@ import {
     warmupAudioDecompiler
 } from "./audio/AudioByteDecompiler.js";
 import {Logger} from "./utils/logger.js";
-import {HttpVoiceSocket} from "./http-voice.js?crosstalk=6";
+import {HttpVoiceSocket} from "./http-voice.js?crosstalk=7";
 
 export class SvgWebSocket {
 
@@ -192,6 +192,7 @@ export class SvgWebSocket {
                         type: "json",
                         fatalAuthError: this.fatalAuthError,
                         packetType: packetType,
+                        payload: data,
                         msg: String(data.message || "")
                     })
                 } catch {

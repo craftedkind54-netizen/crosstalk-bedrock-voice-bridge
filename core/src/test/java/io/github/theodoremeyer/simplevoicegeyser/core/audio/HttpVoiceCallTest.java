@@ -78,6 +78,7 @@ class HttpVoiceCallTest {
         var builder = fake(PlayerAudioListener.Builder.class, (p,m,a) -> m.getName().equals("build") ? listener : p);
         var api = fake(VoicechatServerApi.class, (p,m,a) -> switch(m.getName()) {
             case "getConnectionOf" -> connection;
+            case "getGroups" -> List.of();
             case "createAudioSender" -> sender;
             case "createEncoder" -> encoder;
             case "playerAudioListenerBuilder" -> builder;
@@ -87,6 +88,7 @@ class HttpVoiceCallTest {
             default -> null;
         });
         var bridge = new VoiceChatBridge(); set(bridge, "serverApi", api); set(core, "vcBridge", bridge);
+        set(core, "groupManager", new io.github.theodoremeyer.simplevoicegeyser.core.managers.GroupManager(bridge));
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server); connector.setHost("127.0.0.1"); connector.setPort(0); server.addConnector(connector);
         ServletContextHandler context = new ServletContextHandler(); context.setContextPath("/"); server.setHandler(context);
@@ -129,6 +131,10 @@ class HttpVoiceCallTest {
             while (uploaded.get() < 40 && System.nanoTime() < deadline) Thread.sleep(10);
             assertEquals(40, uploaded.get());
             assertArrayEquals(new byte[]{9,8,7}, Base64.getDecoder().decode(new JSONObject(exchange.body()).getJSONArray("audio").getString(0)));
+            var groupReply = post(base + "exchange", new JSONObject().put("audio", new JSONArray())
+                    .put("controls", new JSONArray().put(new JSONObject().put("type","groups").put("action","list"))), token);
+            assertTrue(new JSONObject(groupReply.body()).getJSONArray("messages").toString().contains("groups"));
+            assertTrue(live.isAuthenticated());
             post(base + "close", new JSONObject(), token);
             assertNull(SvgCore.getConnectionManager().get(player.getUniqueId())); assertEquals(1, removed.get());
             assertEquals(401, post(base + "exchange", new JSONObject().put("audio", new JSONArray()), token).statusCode());

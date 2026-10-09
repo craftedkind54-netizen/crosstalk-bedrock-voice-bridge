@@ -18,6 +18,7 @@ public final class PacketHandler {
      * Create the Packet Handler and register packets
      */
     public PacketHandler() {
+        register(new GroupsPacket());
         register(new ChatPacket());
         register(new JoinPacket());
         register(new CapabilitiesPacket());
