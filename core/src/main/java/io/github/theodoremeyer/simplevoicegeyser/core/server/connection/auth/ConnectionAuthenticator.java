@@ -157,35 +157,26 @@ public final class ConnectionAuthenticator {
             String authKey
     ) {
 
-        Boolean bedrock =
-                GeyserHook.isBedrock(uuid);
-
-        boolean requireBedrock =
-                SvgCore.getConfig().REQUIRE_BEDROCK.get();
-
-        if (bedrock == null) {
-
-            if (requireBedrock) {
-
-                SvgCore.getLogger().warning(
-                        "Unable to enforce: " +
-                                "client.requireBedrock. " +
-                                "Please install floodgate or geyser."
-                );
-            }
-
-            return AuthResponse.ok();
-        }
-
-        if (!bedrock && requireBedrock) {
-
+        AuthResponse result = requireBedrock(GeyserHook.isBedrock(uuid));
+        if (!result.success()) {
             authRateLimiter.recordFailure(authKey);
+        }
+        return result;
+    }
 
+    // Only a positive server-side edition check can authorize browser voice.
+    // Legacy client.requireBedrock settings cannot disable this restriction.
+    static AuthResponse requireBedrock(Boolean bedrock) {
+        if (bedrock == null) {
             return AuthResponse.failure(
-                    "Access Denied: " + "You must be a Bedrock player to join!"
+                    "Bedrock verification unavailable. Ask the server owner to enable Floodgate or Geyser."
             );
         }
-
+        if (!bedrock) {
+            return AuthResponse.failure(
+                    "Browser voice chat is for Bedrock players only. Java players must use the Simple Voice Chat mod."
+            );
+        }
         return AuthResponse.ok();
     }
 

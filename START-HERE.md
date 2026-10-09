@@ -29,6 +29,11 @@ GitHub stores/builds the code; GitHub Pages cannot run this Java voice server.
 
 ## Players
 
+Browser voice chat is for **Bedrock players only**. Java players must use the
+Simple Voice Chat mod in-game. The server verifies the account through Floodgate
+or Geyser; if verification is unavailable, browser login is blocked. The legacy
+`client.requireBedrock` setting can no longer disable this restriction.
+
 1. Join your Minecraft server.
 2. Bedrock: run `/svg pswd` and set a unique 8–32 character voice password in
    the form. If your server cannot show forms, use

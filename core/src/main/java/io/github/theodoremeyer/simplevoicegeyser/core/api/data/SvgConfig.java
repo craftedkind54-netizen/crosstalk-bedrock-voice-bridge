@@ -41,9 +41,6 @@ public final class SvgConfig {
     public final ConfigKey<Integer> IDLE_TIMEOUT =
             new ConfigKey <>(this, "client.idletimeout", 2);
 
-    public final ConfigKey<Boolean> REQUIRE_BEDROCK =
-            new ConfigKey <>(this, "client.requireBedrock", false);
-
     public final ConfigKey<Boolean> USE_EMOTE =
             new ConfigKey <>(this, "client.useEmoteForSVG", true);
 
@@ -112,7 +109,6 @@ public final class SvgConfig {
             CONFIG_INFO,
             VC_TIMEOUT,
             IDLE_TIMEOUT,
-            REQUIRE_BEDROCK,
             USE_EMOTE,
             WEB_CHAT_ENABLED,
             CLIENT_ALLOWED_TYPES_BLACKLIST,

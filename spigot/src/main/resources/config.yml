@@ -9,9 +9,8 @@ client:
   # Idle websocket timeout in minutes
   idletimeout: 2
 
-  # default: false
-  # Only allow bedrock players to join the chat
-  requireBedrock: false
+  # Browser voice is always Bedrock-only. Floodgate or Geyser must verify the player.
+  # The legacy requireBedrock option is ignored, including existing false values.
 
   # default: true
   # Allows bedrock clients to open the SVG menu via emotes.
