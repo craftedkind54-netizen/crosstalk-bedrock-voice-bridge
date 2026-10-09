@@ -8,6 +8,7 @@ import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.SvgConne
 import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.auth.ConnectionAuthenticator;
 import io.github.theodoremeyer.simplevoicegeyser.core.server.packets.PacketHandler;
 import org.eclipse.jetty.websocket.api.Session;
+import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.VoiceTransport;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import org.json.JSONObject;
 
@@ -29,7 +30,7 @@ public final class JettyWebSocket {
 
     private static final PacketHandler packetHandler = new PacketHandler();
 
-    private Session session;
+    private VoiceTransport session;
     private SvgConnection connection;
     private long binaryFrameCount = 0;
     private long binaryByteCount = 0;
@@ -49,16 +50,19 @@ public final class JettyWebSocket {
      */
     @OnWebSocketConnect
     public void onConnect(Session session) {
-        this.session = session;
         session.setMaxTextMessageSize(4096);
         session.setMaxBinaryMessageSize(1920);
         session.setIdleTimeout(Duration.ofMinutes(SvgCore.getConfig().IDLE_TIMEOUT.get()));
+        openTransport(VoiceTransport.websocket(session));
+    }
+
+    public void openTransport(VoiceTransport session) {
+        this.session = session;
         AudioTransportMode preference = AudioTransportMode.fromConfig(SvgCore.getConfig());
         boolean allowLegacyFallback = Boolean.TRUE.equals(SvgCore.getConfig().AUDIO_ALLOW_LEGACY_FALLBACK.get());
 
         this.audioNegotiation = new AudioSessionNegotiation(preference, allowLegacyFallback);
-        SvgCore.getLogger().info("[Websocket] WebSocket connected: " + session.getRemoteAddress());
-        SvgCore.getLogger().debug("WebSocket: Session opened remote=" + session.getRemoteAddress());
+        SvgCore.getLogger().info("[Voice] Transport connected: " + session.remoteAddress());
     }
 
     /**
@@ -91,6 +95,8 @@ public final class JettyWebSocket {
         } catch (Exception e) {
             SvgCore.getLogger().severe("[VCBridge] Exception: " + e.getMessage());
             SvgCore.getLogger().debug("VCBridge: error reading client data", e);
+            sendRaw(ConnectionStates.MessageType.ERROR, "The voice server could not process your request. Ask the server owner to check the console.", true);
+            if (session != null) session.close(4004, "server_error");
         }
     }
 
@@ -200,7 +206,7 @@ public final class JettyWebSocket {
         json.put("fatal", fatal);
 
         try {
-            session.getRemote().sendString(json.toString());
+            session.sendText(json.toString());
         } catch (IOException e) {
             SvgCore.getLogger().debug("WebSocket: Failed to send raw packet", e);
         }
@@ -217,7 +223,7 @@ public final class JettyWebSocket {
         }
 
         try {
-            session.getRemote().sendString(json.toString());
+            session.sendText(json.toString());
             return true;
         } catch (IOException e) {
             SvgCore.getLogger().debug("WebSocket: Failed to send JSON packet", e);
@@ -248,7 +254,7 @@ public final class JettyWebSocket {
      * Get the underlying Session
      * @return Session
      */
-    public Session getSession() {
+    public VoiceTransport getSession() {
         return session;
     }
 

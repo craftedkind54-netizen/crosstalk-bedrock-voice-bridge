@@ -33,7 +33,7 @@ public final class ConnectionManager {
      * @return the SvgConnection
      */
     public SvgConnection connect(
-            Session session,
+            VoiceTransport session,
             SvgPlayer player,
             AudioSessionNegotiation audioNegotiation,
             ClientIdentity clientIdentity

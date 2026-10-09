@@ -1,5 +1,5 @@
 import { SvgAudio } from "./audio/audio.js";
-import { SvgWebSocket } from "./websocket.js";
+import { SvgWebSocket } from "./websocket.js?crosstalk=2";
 
 window.PROJECT_VERSION = document.querySelector('meta[name="project-version"]').content;
 window.BUILD_ID = document.querySelector('meta[name="build-id"]').content;
@@ -111,7 +111,7 @@ el("call-form").addEventListener("submit", async event => {
                 end("Connection timed out. Your microphone is off.");
                 showError("Make sure you are in-game. If this keeps happening, ask the server owner to check the voice bridge and HTTPS connection.");
             }
-        }, 15000);
+        }, 20000);
     } catch (error) {
         if (attempt !== generation) return;
         end("Call could not start. Your microphone is off.");

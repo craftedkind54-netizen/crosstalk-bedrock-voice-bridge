@@ -3,6 +3,7 @@ package io.github.theodoremeyer.simplevoicegeyser.core.server;
 import io.github.theodoremeyer.simplevoicegeyser.core.SvgCore;
 import io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.JettyWebSocket;
 import io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.ResourceServlet;
+import io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.HttpVoiceServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -67,6 +68,7 @@ public final class JettyServer {
 
         // Serve all static resources from /web
         context.addServlet(new ServletHolder(new ResourceServlet()), "/*");
+        context.addServlet(new ServletHolder(new HttpVoiceServlet()), "/api/voice/*");
 
         // Register WebSocket at /ws
         JettyWebSocketServletContainerInitializer.configure(context, (servletContext, wsContainer) -> {

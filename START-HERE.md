@@ -6,7 +6,7 @@ It is a customized MIT-licensed build of SimpleVoice-Geyser, not a Bedrock add-o
 ## Server owner: one-time setup
 
 1. Stop your Paper server and back up its plugins/configuration.
-2. Put `CrossTalk-Paper-0.1.4-crosstalk.1.jar` in `plugins/`.
+2. Put `CrossTalk-Paper-0.1.4-crosstalk.3.jar` in `plugins/`.
    If SimpleVoice-Geyser is already installed, replace it: do not run both.
 3. Keep **Simple Voice Chat's Bukkit/Paper plugin** on the server, plus your
    existing Geyser/Floodgate setup. Your `voicechat-fabric-1.21.11-2.6.22.jar`

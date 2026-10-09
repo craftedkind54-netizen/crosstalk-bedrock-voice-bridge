@@ -81,6 +81,20 @@ public final class GeyserHook {
         }
     }
 
+    /** Returns the original Bedrock gamertag from the trusted server API. */
+    @Nullable
+    public static String bedrockUsername(UUID uuid) {
+        if (isFloodgate()) {
+            var player = FloodgateApi.getInstance().getPlayer(uuid);
+            if (player != null) return player.getUsername();
+        }
+        if (isGeyser()) {
+            var connection = GeyserApi.api().connectionByUuid(uuid);
+            if (connection != null) return connection.bedrockUsername();
+        }
+        return null;
+    }
+
     //FORMS
 
     /**
