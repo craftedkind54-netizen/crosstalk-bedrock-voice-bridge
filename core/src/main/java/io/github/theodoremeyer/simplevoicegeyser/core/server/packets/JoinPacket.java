@@ -12,7 +12,7 @@ import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.compatib
 import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.compatibility.ClientIdentity;
 import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.compatibility.ClientTypePolicy;
 import io.github.theodoremeyer.simplevoicegeyser.core.server.servlets.JettyWebSocket;
-import org.eclipse.jetty.websocket.api.Session;
+import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.VoiceTransport;
 import org.json.JSONObject;
 
 /**
@@ -35,7 +35,7 @@ public final class JoinPacket implements Packet {
 
         SvgCore.getLogger().debug("WebSocket: Join attempt #"
                 + socket.addJoinAttempt() + " from "
-                + socket.getSession().getRemoteAddress());
+                + socket.getSession().remoteAddress());
 
         ClientCompatibilityResult compatibility = ClientCompatibilityValidator.validate(
                 json,
@@ -151,7 +151,7 @@ public final class JoinPacket implements Packet {
 
     private void closeCompatibilityFailure(JettyWebSocket socket, ClientCompatibilityResult compatibility) {
 
-        Session session = socket.getSession();
+        VoiceTransport session = socket.getSession();
 
         if (session == null || !session.isOpen()) {
             return;

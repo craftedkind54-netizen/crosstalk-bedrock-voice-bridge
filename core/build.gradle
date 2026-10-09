@@ -28,6 +28,9 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}")
+    testImplementation("org.geysermc.floodgate:api:${floodgate_api_version}")
+    testImplementation("org.geysermc.geyser:api:${geysermc_api_version}")
+    testRuntimeOnly("com.google.code.gson:gson:2.10")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -103,6 +106,7 @@ tasks.register("generateBuildInfo") {
     outputs.dir(outputDir)
 
     inputs.property("gitCommit", currentGitCommit())
+    inputs.property("projectVersion", project.version.toString())
 
     doLast {
         def gitCommit = currentGitCommit()

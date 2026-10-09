@@ -50,7 +50,7 @@ bash gradlew :core:test :spigot:shadowJar --no-daemon
 
 Windows: replace `bash gradlew` with `gradlew.bat`.
 
-Output: `spigot/build/libs/CrossTalk-Paper-0.1.4-crosstalk.1.jar`.
+Output: `spigot/build/libs/CrossTalk-Paper-0.1.4-crosstalk.3.jar`.
 No npm install is needed: the browser tests use Node's built-in test runner.
 The Gradle wrapper downloads the required build dependencies.
 

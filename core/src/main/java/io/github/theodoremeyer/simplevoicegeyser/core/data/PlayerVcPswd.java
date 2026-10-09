@@ -90,8 +90,12 @@ public final class PlayerVcPswd {
      * @return if it is correct
      */
     public boolean validatePassword(String username, String password) {
-        UUID uuid = getUUID(username);
-        if (uuid == null) return false;
+        return validatePassword(getUUID(username), password);
+    }
+
+    /** Validate against the resolved account, never a second username lookup. */
+    public boolean validatePassword(UUID uuid, String password) {
+        if (uuid == null || password == null) return false;
 
         String stored = store.getPasswordHash(uuid);
         if (stored == null) return false;
@@ -100,7 +104,7 @@ public final class PlayerVcPswd {
             return BCrypt.checkpw(password, stored);
         } catch (IllegalArgumentException e) {
             SvgCore.getLogger().warning(
-                    "[PlayerData] Invalid bcrypt hash for user " + username
+                    "[PlayerData] Invalid bcrypt hash for account " + uuid
             );
             return false;
         }

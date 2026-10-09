@@ -134,7 +134,7 @@ class SvgAudioListenerTest {
         return null;
     }
 
-    private static final class FakePlatform implements Platform {
+    static class FakePlatform implements Platform {
         private final SvgFile config = new FakeSvgFile();
         private final SvgLogger logger = new NoopLogger();
 

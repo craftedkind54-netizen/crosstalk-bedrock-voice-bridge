@@ -5,6 +5,7 @@ import {
     warmupAudioDecompiler
 } from "./audio/AudioByteDecompiler.js";
 import {Logger} from "./utils/logger.js";
+import {HttpVoiceSocket} from "./http-voice.js";
 
 export class SvgWebSocket {
 
@@ -90,7 +91,7 @@ export class SvgWebSocket {
         this.#removeTemporaryEventListeners();
     }
 
-    #createSocket() {
+    #createSocket(useHttp = false) {
         const protocol = location.protocol === "https:" ? "wss:" : "ws:";
         const pageUrl = new URL(window.location.href);
         if (!pageUrl.pathname.endsWith("/")) {
@@ -104,13 +105,26 @@ export class SvgWebSocket {
         const wsUrl = new URL("ws", pageUrl);
         wsUrl.protocol = protocol;
 
-        this.ws = new WebSocket(wsUrl.href);
+        this.ws = useHttp ? new HttpVoiceSocket(wsUrl.href) : new WebSocket(wsUrl.href);
         const currentSocket = this.ws;
         this.ws.binaryType = "arraybuffer";
         this.fatalAuthError = false;
+        let opened = false;
+        const fallback = () => {
+            if (useHttp || opened || this.ws !== currentSocket || this.manualClose) return false;
+            clearTimeout(this.openTimeout);
+            this.ws = null;
+            currentSocket.close();
+            Logger.log("WebSocket unavailable. Trying HTTPS voice connection.");
+            this.#createSocket(true);
+            return true;
+        };
+        if (!useHttp) this.openTimeout = setTimeout(fallback, 4000);
 
         this.ws.onopen = () => {
             if (this.ws !== currentSocket) return;
+            opened = true;
+            clearTimeout(this.openTimeout);
             this.ws.send(JSON.stringify({
                 type: "join",
                 ...this.lastCredentials,
@@ -196,6 +210,7 @@ export class SvgWebSocket {
 
         this.ws.onclose = (event) => {
             if (this.ws !== currentSocket) return;
+            if (fallback()) return;
             const code = event.code;
             const reason = event.reason || "";
 
@@ -261,6 +276,7 @@ export class SvgWebSocket {
 
         this.ws.onerror = () => {
             if (this.ws !== currentSocket) return;
+            if (fallback()) return;
             Logger.log("WebSocket error occurred.");
 
             if (this.ws.readyState !== WebSocket.OPEN) {
@@ -285,6 +301,7 @@ export class SvgWebSocket {
     }
 
     disconnect() {
+        clearTimeout(this.openTimeout);
         this.manualClose = true;
         this.lastCredentials = null;
         this.hasJoined = false;
@@ -310,6 +327,7 @@ export class SvgWebSocket {
     }
 
     async #sendCapabilitiesOnce() {
+        if (this.ws instanceof HttpVoiceSocket) return;
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN || this.capabilitiesSent) {
             return;
         }

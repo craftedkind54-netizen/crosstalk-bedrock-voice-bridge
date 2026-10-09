@@ -61,7 +61,8 @@ public final class ResourceServlet extends HttpServlet {
             }
 
             resp.setContentType(mime);
-            resp.setHeader("Cache-Control", "public, max-age=3600");
+            resp.setHeader("Cache-Control", path.endsWith(".html") || path.endsWith(".js")
+                    ? "no-cache" : "public, max-age=3600");
 
             in.transferTo(resp.getOutputStream());
         }

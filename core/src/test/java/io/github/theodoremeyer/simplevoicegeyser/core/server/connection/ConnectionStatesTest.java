@@ -21,7 +21,7 @@ class ConnectionStatesTest {
     void connectionMessagesSerializeTypeAsLowercaseJsonString() {
         CapturingSession session = new CapturingSession();
         SvgConnection connection = new SvgConnection(
-                session.proxy(),
+                VoiceTransport.websocket(session.proxy()),
                 new FakePlayer(),
                 null,
                 ClientIdentity.web("0.1.3", "test-build")
@@ -39,7 +39,7 @@ class ConnectionStatesTest {
         JettyWebSocket socket = new JettyWebSocket();
         Field field = JettyWebSocket.class.getDeclaredField("session");
         field.setAccessible(true);
-        field.set(socket, session.proxy());
+        field.set(socket, VoiceTransport.websocket(session.proxy()));
 
         socket.sendRaw(ConnectionStates.MessageType.ERROR, "Invalid input.", false);
 

@@ -23,7 +23,7 @@ import java.util.UUID;
 public final class SvgConnection {
 
     private final UUID uuid;
-    private final Session session;
+    private final VoiceTransport session;
     private final SvgPlayer player;
     private SvgAudioSender audioSender;
     private SvgAudioListener audioListener;
@@ -40,7 +40,7 @@ public final class SvgConnection {
      * @param clientIdentity the Client's Identity
      */
     SvgConnection(
-            Session session,
+            VoiceTransport session,
             SvgPlayer player,
             AudioSessionNegotiation audioNegotiation,
             ClientIdentity clientIdentity
@@ -152,7 +152,7 @@ public final class SvgConnection {
         }
 
         try {
-            session.getRemote().sendString(json.toString());
+            session.sendText(json.toString());
         } catch (IOException e) {
             SvgCore.getLogger().debug("SvgConnection: Failed to send json packet", e);
             disconnect(ConnectionStates.DisconnectCodes.FATAL_ERROR.getCode(), "Packet send failure");

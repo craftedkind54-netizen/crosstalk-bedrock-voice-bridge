@@ -68,7 +68,9 @@ public final class ConnectionAuthenticator {
                 );
             }
 
-            String authKey = username.toLowerCase(Locale.ROOT);
+            UUID uuid = BedrockLoginResolver.resolve(username,
+                    SvgCore.getPlayerManager().getAllPlayers(), GeyserHook::bedrockUsername);
+            String authKey = uuid == null ? username.toLowerCase(Locale.ROOT) : uuid.toString();
 
             if (!authRateLimiter.allow(authKey)) {
 
@@ -79,20 +81,18 @@ public final class ConnectionAuthenticator {
             }
 
             PlayerVcPswd passwordManager = SvgCore.getPasswordManager();
-            UUID uuid = passwordManager.getUUID(username);
 
             // Generic auth failure response
             if (uuid == null ||
-                    !passwordManager.isPasswordSet(username) ||
                     !passwordManager.validatePassword(
-                            username,
+                            uuid,
                             password
                     )) {
 
                 authRateLimiter.recordFailure(authKey);
 
                 return AuthResponse.failure(
-                        "Access Denied: Invalid username or password."
+                        "Access denied. Stay online in Minecraft Bedrock, enter your exact Bedrock username without a prefix, and use the voice password set with /svg pswd."
                 );
             }
 
@@ -107,7 +107,7 @@ public final class ConnectionAuthenticator {
                     SvgCore.getPlayerManager()
                             .getPlayer(uuid);
 
-            if (player == null) {
+            if (player == null || !player.isOnline()) {
 
                 return AuthResponse.failure(
                         "Timeout: You didn’t join the server in time."
@@ -250,6 +250,8 @@ public final class ConnectionAuthenticator {
         }
 
         authRateLimiter.reset(username.toLowerCase(Locale.ROOT));
+        UUID uuid = SvgCore.getPasswordManager().getUUID(username);
+        if (uuid != null) authRateLimiter.reset(uuid.toString());
     }
 
     /**

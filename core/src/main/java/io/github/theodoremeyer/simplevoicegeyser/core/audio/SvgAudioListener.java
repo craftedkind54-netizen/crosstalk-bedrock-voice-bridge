@@ -12,6 +12,7 @@ import de.maxhenkel.voicechat.api.packets.SoundPacket;
 import de.maxhenkel.voicechat.api.packets.StaticSoundPacket;
 import io.github.theodoremeyer.simplevoicegeyser.core.SvgCore;
 import org.eclipse.jetty.websocket.api.Session;
+import io.github.theodoremeyer.simplevoicegeyser.core.server.connection.VoiceTransport;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -49,7 +50,7 @@ public final class SvgAudioListener {
     private long packetSentLegacyCount = 0;
     private long packetSentSvgV2Count = 0;
 
-    private final Session session;
+    private final VoiceTransport session;
     private final AudioSessionNegotiation negotiation;
     private final AudioByteCompiler audioByteCompiler;
     private PlayerAudioListener registeredListener;
@@ -62,6 +63,10 @@ public final class SvgAudioListener {
      * @param negotiation the negotiation
      */
     public SvgAudioListener(UUID listenerId, Session session, VoicechatServerApi serverApi, AudioSessionNegotiation negotiation) {
+        this(listenerId, VoiceTransport.websocket(session), serverApi, negotiation);
+    }
+
+    public SvgAudioListener(UUID listenerId, VoiceTransport session, VoicechatServerApi serverApi, AudioSessionNegotiation negotiation) {
         this.listenerId = listenerId;
         this.session = session;
         this.serverApi = serverApi;
@@ -187,7 +192,7 @@ public final class SvgAudioListener {
                 }
 
                 packetSentByteCount += bytes.length;
-                session.getRemote().sendBytes(ByteBuffer.wrap(bytes));
+                session.sendBinary(bytes);
                 packetSentCount++;
             } catch (Exception e) {
                 packetSendFailedCount++;

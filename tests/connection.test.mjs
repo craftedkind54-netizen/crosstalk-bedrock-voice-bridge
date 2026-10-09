@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SvgWebSocket } from "../core/web/js/websocket.js";
+import { HttpVoiceSocket } from "../core/web/js/http-voice.js";
 
 globalThis.location = { protocol: "https:", reload() {} };
 globalThis.window = { location: { href: "https://voice.example.com/" }, isSecureContext: true, PROJECT_VERSION: "test", BUILD_ID: "test" };
@@ -22,6 +23,27 @@ function setup() {
     bridge.stopReconnection();
     return { bridge, ws: bridge.ws, audio, status };
 }
+
+test("failed WebSocket upgrade falls back once and ignores stale socket callbacks", async () => {
+    const requests = [];
+    globalThis.fetch = async (url, options) => {
+        requests.push({url: String(url), options});
+        return {ok: false, json: async () => ({open:false, messages:[JSON.stringify({type:'error', message:'Invalid voice password'})]})};
+    };
+    const {bridge, ws, status} = setup();
+    ws.onerror();
+    assert.ok(bridge.ws instanceof HttpVoiceSocket);
+    const fallback = bridge.ws;
+    ws.onclose({code:1006});
+    ws.onopen();
+    assert.equal(bridge.ws, fallback);
+    assert.equal(ws.sent.length, 0);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(requests.length, 1);
+    assert.match(requests[0].url, /\/api\/voice\/join$/);
+    assert.equal(status.some(s => s.connected), false);
+    bridge.disconnect();
+});
 
 test("opening a socket does not claim success or send microphone audio before authentication", async () => {
     const { bridge, ws, audio, status } = setup();
