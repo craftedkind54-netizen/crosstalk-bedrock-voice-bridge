@@ -55,13 +55,10 @@ public final class GeyserHook {
      */
     public static Boolean isBedrock(UUID uuid) {
 
-        if (isFloodgate()) {
-            return FloodgateApi.getInstance().isFloodgatePlayer(uuid);
-        } else if (isGeyser()) {
-            return GeyserApi.api().isBedrockPlayer(uuid);
-        } else {
-            return null;
-        }
+        if (isFloodgate() && FloodgateApi.getInstance().isFloodgatePlayer(uuid)) return true;
+        if (isGeyser() && GeyserApi.api().isBedrockPlayer(uuid)) return true;
+        if (proxyUsername(uuid) != null) return true;
+        return isEnabled() ? false : null;
     }
 
     /**
@@ -92,7 +89,16 @@ public final class GeyserHook {
             var connection = GeyserApi.api().connectionByUuid(uuid);
             if (connection != null) return connection.bedrockUsername();
         }
-        return null;
+        return proxyUsername(uuid);
+    }
+
+    private static String proxyUsername(UUID uuid) {
+        var player = SvgCore.getPlayerManager().getPlayer(uuid);
+        if (player == null || !player.isOnline()) return null;
+        return ProxyBedrockIdentity.username(uuid, player.getName(),
+                SvgCore.getConfig().TRUST_PROXY_BEDROCK.get(),
+                SvgCore.getPlatform().isProxyForwardingEnabled(),
+                SvgCore.getConfig().PROXY_BEDROCK_PREFIX.get());
     }
 
     //FORMS

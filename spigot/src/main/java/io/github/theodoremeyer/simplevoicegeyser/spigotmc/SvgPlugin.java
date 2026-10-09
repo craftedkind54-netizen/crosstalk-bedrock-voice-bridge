@@ -87,6 +87,11 @@ public class SvgPlugin extends JavaPlugin implements Platform {
         SvgCore.disable();
     }
 
+    @Override
+    public boolean isProxyForwardingEnabled() {
+        return Bukkit.spigot().getConfig().getBoolean("settings.bungeecord", false);
+    }
+
     //--------------
     // Platform Impl
     //--------------

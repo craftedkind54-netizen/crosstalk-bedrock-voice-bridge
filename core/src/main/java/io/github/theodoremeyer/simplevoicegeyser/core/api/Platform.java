@@ -67,5 +67,8 @@ public interface Platform {
      */
     boolean isDependencyEnabled(String name);
 
+    /** Whether the server accepts player identities forwarded by its configured proxy. */
+    default boolean isProxyForwardingEnabled() { return false; }
+
 
 }
