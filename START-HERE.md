@@ -34,8 +34,9 @@ GitHub stores/builds the code; GitHub Pages cannot run this Java voice server.
    the form. If your server cannot show forms, use
    `/svg pswd YOUR_VOICE_PASSWORD confirm`. Command arguments can appear in
    server logs, so use a password only for this voice service.
-3. Open the HTTPS voice page on your phone or computer. Enter your exact
-   server username (including any Bedrock prefix) and voice password.
+3. Open the HTTPS voice page on your phone or computer. Enter your username
+   without the Bedrock prefix, matching every uppercase and lowercase letter
+   exactly, and enter your voice password.
 4. Press **Start call**, allow the microphone, and keep the page open.
 
 Java players with Simple Voice Chat installed use the in-game mod normally.
@@ -56,8 +57,9 @@ proximity; group settings can intentionally change who hears whom.
 - Website unreachable: verify the extra TCP port, bind address, DNS and proxy.
 - Page works but call fails: the proxy must forward `/ws` WebSocket upgrades.
 - Microphone blocked: use HTTPS and allow this site's microphone permission.
-- Invalid login: use the exact server name/prefix and the voice password,
-  not a Microsoft password. Reset it in-game with `/svg pswd` if needed.
+- Invalid login: enter your username without the Bedrock prefix and match its
+  uppercase and lowercase letters exactly. Use your voice password, not a
+  Microsoft password. Reset it in-game with `/svg pswd` if needed.
 - Voice plugin unavailable: install the Bukkit/Paper build of Simple Voice Chat
   on Paper. The attached Fabric jar is for Java clients.
 - Browser dies in the background: keep the phone unlocked with this page open,
