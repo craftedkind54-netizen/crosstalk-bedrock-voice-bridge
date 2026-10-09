@@ -41,7 +41,7 @@ export class SvgAudio {
     }
 
     resolveAudioModuleUrl(moduleName) {
-        return new URL(moduleName, import.meta.url).href;
+        return new URL(moduleName + "?crosstalk=6", import.meta.url).href;
     }
 
     async initAudio() {
@@ -249,6 +249,10 @@ export class SvgAudio {
         }
 
         return this.muted;
+    }
+
+    setPlaybackBuffer(milliseconds) {
+        this.audioWorkletNode?.port.postMessage({ type: "buffer-ms", milliseconds });
     }
 
     playAudio(buffer) {

@@ -32,7 +32,7 @@ export class HttpVoiceSocket {
         const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
         if (bytes.length !== 1920) return;
         this.queue.push({ time: Date.now(), data: btoa(String.fromCharCode(...bytes)) });
-        if (this.queue.length > 10) this.queue.shift();
+        if (this.queue.length > 40) this.queue.shift();
         this.bufferedAmount = this.queue.length * 1920;
     }
 
@@ -87,11 +87,12 @@ export class HttpVoiceSocket {
 
     async poll() {
         if (this.readyState !== 1 || !this.token) return;
-        const audio = this.queue.splice(0).filter(frame => Date.now() - frame.time < 250).map(frame => frame.data);
+        const started = Date.now();
+        const audio = this.queue.splice(0).filter(frame => Date.now() - frame.time < 1000).map(frame => frame.data);
         this.bufferedAmount = 0;
         try {
             await this.deliver(await this.request("exchange", { audio }));
-            if (this.readyState === 1) this.pollTimer = setTimeout(() => void this.poll(), 60);
+            if (this.readyState === 1) this.pollTimer = setTimeout(() => void this.poll(), Math.max(0, 20 - (Date.now() - started)));
         } catch (error) { this.fail(error.name === "AbortError" ? "Voice connection timed out. Start a new call." : error.message); }
     }
 

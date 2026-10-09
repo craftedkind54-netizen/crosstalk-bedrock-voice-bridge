@@ -22,7 +22,7 @@ class Microphone extends AudioWorkletProcessor {
         // ---- 2) VAD thresholds (hysteresis) ----
         const START_THRESHOLD = 0.00008; // speech starts
         const STOP_THRESHOLD  = 0.00004; // speech ends
-        const HANGOVER_FRAMES = 18;       // ~31.5 ms @ 128 frames
+        const HANGOVER_FRAMES = Math.ceil(sampleRate * 0.25 / input.length); // preserve quiet word endings
 
         // ---- 3) Hangover-based VAD ----
         if (energy > START_THRESHOLD) {

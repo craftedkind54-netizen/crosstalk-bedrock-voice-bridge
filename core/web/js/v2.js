@@ -1,5 +1,5 @@
-import { SvgAudio } from "./audio/audio.js";
-import { SvgWebSocket } from "./websocket.js?crosstalk=4";
+import { SvgAudio } from "./audio/audio.js?crosstalk=6";
+import { SvgWebSocket } from "./websocket.js?crosstalk=6";
 
 window.PROJECT_VERSION = document.querySelector('meta[name="project-version"]').content;
 window.BUILD_ID = document.querySelector('meta[name="build-id"]').content;

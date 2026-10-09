@@ -19,11 +19,11 @@ class HttpVoiceTransportTest {
     }
     @Test void slowConsumersHaveBoundedQueues() {
         var transport = new HttpVoiceTransport("test");
-        for (int i = 0; i < 200; i++) { transport.sendBinary(new byte[]{(byte)i}); transport.sendText("m" + i); }
+        for (int i = 0; i < 600; i++) { transport.sendBinary(new byte[]{(byte)i}); transport.sendText("m" + i); }
         var result = transport.drain();
-        assertEquals(64, result.getJSONArray("audio").length());
+        assertEquals(512, result.getJSONArray("audio").length());
         assertEquals(32, result.getJSONArray("messages").length());
-        assertEquals("m168", result.getJSONArray("messages").getString(0));
+        assertEquals("m568", result.getJSONArray("messages").getString(0));
     }
     @Test void closeDropsAudioButDeliversFinalError() {
         var transport = new HttpVoiceTransport("test");
@@ -39,7 +39,7 @@ class HttpVoiceTransportTest {
     @Test void staleAudioIsDiscarded() throws Exception {
         var transport = new HttpVoiceTransport("test");
         transport.sendBinary(new byte[]{1});
-        Thread.sleep(450);
+        Thread.sleep(1100);
         assertEquals(0, transport.drain().getJSONArray("audio").length());
     }
 }

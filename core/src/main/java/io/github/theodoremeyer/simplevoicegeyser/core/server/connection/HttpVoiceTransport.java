@@ -25,7 +25,7 @@ public final class HttpVoiceTransport implements VoiceTransport {
     }
     public synchronized void sendBinary(byte[] bytes) {
         if (!open || bytes.length > 16384) return;
-        while (audio.size() >= 64) audio.removeFirst();
+        while (audio.size() >= 512) audio.removeFirst();
         audio.addLast(new Frame(System.nanoTime(), bytes.clone()));
     }
     public synchronized void close(int code, String reason) {
@@ -42,7 +42,7 @@ public final class HttpVoiceTransport implements VoiceTransport {
         long now = System.nanoTime();
         while (!audio.isEmpty()) {
             Frame frame = audio.removeFirst();
-            if (now - frame.time() <= 400_000_000L) frames.put(Base64.getEncoder().encodeToString(frame.bytes()));
+            if (now - frame.time() <= 1_000_000_000L) frames.put(Base64.getEncoder().encodeToString(frame.bytes()));
         }
         return new JSONObject().put("open", open).put("code", code).put("reason", reason)
                 .put("messages", texts).put("audio", frames);
