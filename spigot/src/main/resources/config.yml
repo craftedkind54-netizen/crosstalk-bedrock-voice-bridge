@@ -31,8 +31,8 @@ client:
     # The text svg sends when a player joins
     text:
       - "This server uses CrossTalk for Java + Bedrock voice chat."
-      - "Set your voice password with /svg pswd,"
-      - "then open the server's voice website and press Start call."
+      - "Open the server's voice website and enter your Bedrock username."
+      - "Press Send code to Minecraft, then enter the private code on the website."
 
 
   allowedTypes:

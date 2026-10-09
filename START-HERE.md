@@ -6,7 +6,7 @@ It is a customized MIT-licensed build of SimpleVoice-Geyser, not a Bedrock add-o
 ## Server owner: one-time setup
 
 1. Stop your Paper server and back up its plugins/configuration.
-2. Put `CrossTalk-Paper-0.1.4-crosstalk.3.jar` in `plugins/`.
+2. Put `CrossTalk-Paper-0.1.4-crosstalk.4.jar` in `plugins/`.
    If SimpleVoice-Geyser is already installed, replace it: do not run both.
 3. Keep **Simple Voice Chat's Bukkit/Paper plugin** on the server, plus your
    existing Geyser/Floodgate setup. Your `voicechat-fabric-1.21.11-2.6.22.jar`
@@ -35,14 +35,11 @@ or Geyser; if verification is unavailable, browser login is blocked. The legacy
 `client.requireBedrock` setting can no longer disable this restriction.
 
 1. Join your Minecraft server.
-2. Bedrock: run `/svg pswd` and set a unique 8–32 character voice password in
-   the form. If your server cannot show forms, use
-   `/svg pswd YOUR_VOICE_PASSWORD confirm`. Command arguments can appear in
-   server logs, so use a password only for this voice service.
-3. Open the HTTPS voice page on your phone or computer. Enter your username
-   without the Bedrock prefix, matching every uppercase and lowercase letter
-   exactly, and enter your voice password.
-4. Press **Start call**, allow the microphone, and keep the page open.
+2. Open the HTTPS voice page. Enter your exact Bedrock username without the prefix.
+3. Press **Send code to Minecraft** and read the private message in Minecraft chat.
+4. Enter the six-digit code on the website and press **Start call**. Allow the microphone.
+   Codes expire after two minutes and work once. No saved password is needed.
+   Keep Minecraft and the voice page open. Never share your confirmation code.
 
 Java players with Simple Voice Chat installed use the in-game mod normally.
 Browser users must stay logged into Minecraft. Leaving/disconnecting stops
@@ -62,9 +59,8 @@ proximity; group settings can intentionally change who hears whom.
 - Website unreachable: verify the extra TCP port, bind address, DNS and proxy.
 - Page works but call fails: the proxy must forward `/ws` WebSocket upgrades.
 - Microphone blocked: use HTTPS and allow this site's microphone permission.
-- Invalid login: enter your username without the Bedrock prefix and match its
-  uppercase and lowercase letters exactly. Use your voice password, not a
-  Microsoft password. Reset it in-game with `/svg pswd` if needed.
+- Invalid login: stay online from Bedrock and match your username's capitalization.
+  Request a fresh code and read your private Minecraft chat. Expired or used codes cannot reconnect.
 - Voice plugin unavailable: install the Bukkit/Paper build of Simple Voice Chat
   on Paper. The attached Fabric jar is for Java clients.
 - Browser dies in the background: keep the phone unlocked with this page open,

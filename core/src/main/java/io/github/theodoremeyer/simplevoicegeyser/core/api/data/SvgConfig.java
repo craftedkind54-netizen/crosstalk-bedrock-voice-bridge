@@ -59,8 +59,8 @@ public final class SvgConfig {
     public final ConfigKey<List<String>> JOIN_MESSAGE_TEXT =
             new ConfigKey<>(this, "client.join-message.text", List.of(
                     "This Server Uses SimpleVoice-Geyser.",
-                    "To set it up, run /svg pswd [password],",
-                    "Then join Via the server's SVG website."
+                    "Open the voice website and enter your Bedrock username.",
+                    "Send a code to Minecraft, then enter it on the website."
             ));
 
     public final ConfigKey<Boolean> DEFAULT_GROUP_ENABLED =
