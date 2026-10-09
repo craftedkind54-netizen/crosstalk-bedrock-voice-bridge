@@ -5,7 +5,7 @@ import {
     warmupAudioDecompiler
 } from "./audio/AudioByteDecompiler.js";
 import {Logger} from "./utils/logger.js";
-import {HttpVoiceSocket} from "./http-voice.js?crosstalk=7";
+import {HttpVoiceSocket} from "./http-voice.js?crosstalk=8";
 
 export class SvgWebSocket {
 
@@ -338,13 +338,13 @@ export class SvgWebSocket {
         try {
             const caps = await getAudioCapabilities();
             const runtime = this.audioController.getAudioRuntime();
-            const canUseSvgV2 = caps.supportsSvgV2 && runtime.workletSupported;
-            const canDecodeOpus = caps.supportsOpusDecoder && runtime.workletSupported;
+            const canUseSvgV2 = false; // Browser calls use source-tagged PCM for per-player audio.
+            const canDecodeOpus = false;
             this.ws.send(JSON.stringify({
                 type: "capabilities",
                 audio: {
-                    protocols: canUseSvgV2 ? ["legacy", "svg-v2"] : ["legacy"],
-                    supportsOpusDecoder: canDecodeOpus,
+                    protocols: ["legacy"], // Source-tagged CrossTalk PCM preserves per-player mixing and speaking indicators.
+                    supportsOpusDecoder: false,
                     secureContext: caps.secureContext,
                     decoder: caps.decoder
                 }

@@ -19,7 +19,7 @@ class SpeakerProcessor extends AudioWorkletProcessor {
             let stream = this.streams.get(id);
             if (!stream) {
                 if (this.streams.size >= 64) this.streams.delete(this.streams.keys().next().value);
-                stream = { left: new Float32Array(this.capacity), right: new Float32Array(this.capacity), read: 0, write: 0, available: 0, waiting: 0, idle: 0, started: false };
+                stream = { left: new Float32Array(this.capacity), right: new Float32Array(this.capacity), read: 0, write: 0, available: 0, waiting: 0, idle: 0, started: false, talkHold: 0, talking: false };
                 this.streams.set(id, stream);
             }
             stream.idle = 0;
@@ -37,6 +37,15 @@ class SpeakerProcessor extends AudioWorkletProcessor {
         };
     }
 
+    activity(id, stream, audible, frames) {
+        stream.talkHold = audible ? 9600 : Math.max(0, stream.talkHold - frames);
+        const speaking = stream.talkHold > 0;
+        if (speaking !== stream.talking) {
+            stream.talking = speaking;
+            this.port.postMessage?.({type:"speaking",streamId:id,speaking});
+        }
+    }
+
     process(inputs, outputs) {
         const left = outputs[0]?.[0];
         if (!left) return true;
@@ -46,7 +55,9 @@ class SpeakerProcessor extends AudioWorkletProcessor {
         for (const [id, stream] of this.streams) {
             if (!stream.available) {
                 stream.idle += left.length;
-                stream.started = false; stream.waiting = 0;
+                // A short delivery gap must not trigger another full startup delay.
+                if (stream.idle >= 4800) { stream.started = false; stream.waiting = 0; }
+                this.activity(id, stream, false, left.length);
                 if (stream.idle > 240000) this.streams.delete(id);
                 continue;
             }
@@ -59,12 +70,15 @@ class SpeakerProcessor extends AudioWorkletProcessor {
                 if (stream.waiting < this.target && (this.target > 1920 || stream.available < this.target)) continue;
                 stream.started = true;
             }
+            let energy = 0, played = 0;
             for (let i = 0; i < left.length && stream.available; i++) {
+                energy += stream.left[stream.read] ** 2 + stream.right[stream.read] ** 2; played++;
                 left[i] += stream.left[stream.read];
                 if (right) right[i] += stream.right[stream.read];
                 stream.read = (stream.read + 1) % this.capacity;
                 stream.available--;
             }
+            this.activity(id, stream, played > 0 && energy / (played * 2) > 0.000015, left.length);
         }
         for (let i = 0; i < left.length; i++) {
             left[i] = Math.max(-1, Math.min(1, left[i]));

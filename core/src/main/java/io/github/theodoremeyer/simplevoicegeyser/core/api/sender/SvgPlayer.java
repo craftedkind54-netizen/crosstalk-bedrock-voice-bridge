@@ -44,4 +44,9 @@ public abstract class SvgPlayer extends Sender {
      * @return the Player
      */
     public abstract Object getPlayer();
+
+    /** Public skin texture already supplied by the game profile; never fetch on the game thread. */
+    public String getSkinUrl() { return ""; }
+    public boolean canSee(SvgPlayer other) { return true; }
+    public boolean isNearby(SvgPlayer other, double range) { return false; }
 }

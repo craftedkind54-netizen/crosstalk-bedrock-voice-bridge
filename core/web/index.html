@@ -7,7 +7,7 @@
   <meta name="project-version" content="@@PROJECT_VERSION@@">
   <meta name="referrer" content="no-referrer">
   <title>CrossTalk · Minecraft voice chat</title>
-  <link rel="stylesheet" href="css/v2.css?crosstalk=7">
+  <link rel="stylesheet" href="css/v2.css?crosstalk=8">
 </head>
 <body>
   <header><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">C</span> CrossTalk</a><span class="badge">JAVA + BEDROCK</span></header>
@@ -38,6 +38,11 @@
         <div class="mic-status"><span id="mic-light" class="mic-light"></span><span id="mic-text">Microphone on</span></div>
         <button id="mute" type="button" aria-pressed="false">Mute microphone</button>
         <button id="end-call" class="danger" type="button">End call</button>
+        <section class="voice-roster" aria-label="Players in voice chat">
+          <div><h3 id="members-heading">Your microphone</h3><div id="group-members" class="player-grid"></div></div>
+          <div><h3>Nearby players</h3><div id="nearby-players" class="player-grid"></div><p id="nearby-empty" class="field-help">Players appear here when they walk within voice range.</p></div>
+          <p class="field-help">A white outline means that player is speaking. Use headphones; your microphone stays open until you mute it.</p>
+        </section>
         <section class="groups" aria-labelledby="group-heading">
           <h3 id="group-heading">Voice groups</h3>
           <p id="current-group">Proximity chat</p>
@@ -47,14 +52,14 @@
           <label for="group-password">Group password, if needed</label>
           <input id="group-password" type="password" maxlength="64" autocomplete="off" placeholder="Or accept a group invite">
           <div class="group-actions"><button id="join-group" type="button">Join group</button><button id="refresh-groups" type="button">Refresh</button><button id="leave-group" type="button" disabled>Leave group</button></div>
-          <label for="player-list">Invite a player to your group</label>
+          <label for="player-list">Invite a Java or Bedrock player</label>
           <select id="player-list"><option value="">Choose a player</option></select>
           <button id="invite-player" type="button" disabled>Send group invite</button>
-          <details><summary>Create a group</summary>
+          <section class="create-group"><h3>Create a voice group</h3>
             <label for="new-group-name">Group name</label><input id="new-group-name" maxlength="32" placeholder="Your group name">
             <label for="new-group-password">Optional group password</label><input id="new-group-password" type="password" maxlength="64" autocomplete="new-password" placeholder="Leave blank for an open group">
             <button id="create-group" type="button">Create and join</button>
-          </details>
+          </section>
           <p class="field-help">Invites from Minecraft appear here. Group members can talk across the server. Leave to return to proximity chat.</p>
           <p id="group-message" role="status" aria-live="polite"></p>
         </section>
@@ -66,6 +71,6 @@
   </main>
   <footer><span>Proximity voice · Stay close, stay connected.</span><span>Built on <a href="https://github.com/TheodoreMeyer/SimpleVoice-Geyser" target="_blank" rel="noopener noreferrer">SimpleVoice-Geyser</a></span></footer>
   <noscript>Enable JavaScript to use browser voice chat.</noscript>
-  <script type="module" src="js/v2.js?crosstalk=7"></script>
+  <script type="module" src="js/v2.js?crosstalk=8"></script>
 </body>
 </html>

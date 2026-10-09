@@ -123,3 +123,21 @@ test("microphone preroll preserves quiet starts, stays bounded, and never leaks 
     a.toggleMute(); a.sendMicPacket(new Int16Array(960).fill(13),"voice",true,false);
     assert.deepEqual(sent,[5,6,7,8,9,10,13]);
 });
+
+test("open microphone preserves quiet packets and mute still blocks every packet",()=>{
+ const a=new SvgAudio(),sent=[];a.onMicData(b=>sent.push(new Int16Array(b)[0]));
+ assert.equal(a.getTransmitMode(),"open");
+ for(let i=0;i<20;i++)a.sendMicPacket(new Int16Array(960).fill(i),a.getTransmitMode(),false,false);
+ assert.equal(sent.length,20);a.toggleMute();a.sendMicPacket(new Int16Array(960).fill(99),"open",true,false);assert.equal(sent.length,20);
+});
+test("talking indicators follow audible playback and stop after silence",()=>{
+ const p=processor(),events=[];p.port.postMessage=e=>events.push(e);p.port.onmessage({data:{type:"buffer-ms",milliseconds:300}});
+ enqueue(p,"alice",0.1,960);for(let i=0;i<100;i++)render(p);assert.equal(events.length,0);
+ for(let i=0;i<30;i++)render(p);assert.equal(events[0].streamId,"alice");assert.equal(events[0].speaking,true);
+ for(let i=0;i<100;i++)render(p);assert.equal(events.at(-1).speaking,false);
+});
+test("a brief underrun resumes immediately instead of adding another 300ms gap",()=>{
+ const p=processor();p.port.onmessage({data:{type:"buffer-ms",milliseconds:300}});enqueue(p,"alice",0.2,960);
+ for(let i=0;i<135;i++)render(p);enqueue(p,"alice",0.2,960);
+ assert.ok(render(p)[0].some(v=>v>0));
+});

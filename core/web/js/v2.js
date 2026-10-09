@@ -1,12 +1,14 @@
-import { setupGroups } from "./groups.js?crosstalk=7";
-import { SvgAudio } from "./audio/audio.js?crosstalk=7";
-import { SvgWebSocket } from "./websocket.js?crosstalk=7";
+import { setupPlayers } from "./players.js?crosstalk=8";
+import { setupGroups } from "./groups.js?crosstalk=8";
+import { SvgAudio } from "./audio/audio.js?crosstalk=8";
+import { SvgWebSocket } from "./websocket.js?crosstalk=8";
 
 window.PROJECT_VERSION = document.querySelector('meta[name="project-version"]').content;
 window.BUILD_ID = document.querySelector('meta[name="build-id"]').content;
 const el = id => document.getElementById(id);
 const audio = new SvgAudio();
 const socket = new SvgWebSocket(audio);
+const stopPlayers = setupPlayers(socket, audio, document);
 const stopGroups = setupGroups(socket, document);
 let generation = 0;
 let timeout;
@@ -38,6 +40,7 @@ function render(connected) {
 function end(message = "Call ended. Your microphone is off.") {
     generation++;
     stopGroups();
+    stopPlayers();
     clearTimeout(timeout);
     clearInterval(heartbeat);
     socket.disconnect();
