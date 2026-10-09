@@ -3,6 +3,8 @@ export function setupGroups(socket, document) {
     let timer;
     let active = false;
     let lastRequest = 0;
+    const optionSnapshots = new Map();
+    let inviteSnapshot = "";
     function send(action, fields = {}) {
         if (!active || !socket.isConnected()) return;
         lastRequest = Date.now();
@@ -10,13 +12,16 @@ export function setupGroups(socket, document) {
         if (action !== "list") el("group-message").textContent = "Updating…";
     }
     function options(id, items, empty) {
+        const signature = JSON.stringify(items);
+        if (optionSnapshots.get(id) === signature) return;
+        optionSnapshots.set(id, signature);
         const select = el(id), previous = select.value;
         select.replaceChildren();
         const placeholder = document.createElement("option");
         placeholder.value = ""; placeholder.textContent = empty; select.append(placeholder);
         for (const item of items) {
             const option = document.createElement("option");
-            option.value = item.id; option.textContent = item.name + (item.locked ? " · password" : "");
+            option.value = item.id; option.textContent = item.name + (item.edition ? " · " + item.edition : "") + (item.locked ? " · password" : "");
             select.append(option);
         }
         select.value = items.some(i => i.id === previous) ? previous : "";
@@ -26,10 +31,11 @@ export function setupGroups(socket, document) {
         clearInterval(timer);
         el("group-message").textContent = "";
         el("group-invites").replaceChildren();
+        inviteSnapshot = ""; optionSnapshots.clear();
         el("current-group").textContent = "Proximity chat";
         if (active) {
             send("list");
-            timer = setInterval(() => { if (Date.now() - lastRequest > 4000) send("list"); }, 5000);
+            timer = setInterval(() => { if (Date.now() - lastRequest > 750) send("list"); }, 1000);
         }
     }, true);
     socket.addEventListener("message", message => {
@@ -42,6 +48,9 @@ export function setupGroups(socket, document) {
         options("group-list", data.groups || [], "Choose a group");
         options("player-list", data.players || [], "Choose a player");
         const invites = el("group-invites");
+        const signature = JSON.stringify(data.invites || []);
+        if (signature !== inviteSnapshot) {
+        inviteSnapshot = signature;
         invites.replaceChildren();
         for (const invite of data.invites || []) {
             const row = document.createElement("div"), label = document.createElement("p");
@@ -54,6 +63,7 @@ export function setupGroups(socket, document) {
                 button.addEventListener("click", () => send(action, { id: invite.id })); row.append(button);
             }
             invites.append(row);
+        }
         }
         if (data.message) el("group-message").textContent = data.message;
     }, true);

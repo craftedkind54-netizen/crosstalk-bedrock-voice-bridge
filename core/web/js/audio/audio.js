@@ -12,6 +12,8 @@ export class SvgAudio {
 
     constructor() {
         this.micHandler = null;
+        this.activityHandler = null;
+        this.localSpeaking = false;
         this.preRoll = [];
         this.microphoneStream = null;
         this.micNode = null;
@@ -25,7 +27,7 @@ export class SvgAudio {
         this.available = 0;
         this.micIndicator = null;
         this.isPttActive = () => true;
-        this.getTransmitMode = () => "voice";
+        this.getTransmitMode = () => "open";
 
         this.audioRuntime = {
             audioContextSupported: false,
@@ -42,7 +44,7 @@ export class SvgAudio {
     }
 
     resolveAudioModuleUrl(moduleName) {
-        return new URL(moduleName + "?crosstalk=7", import.meta.url).href;
+        return new URL(moduleName + "?crosstalk=8", import.meta.url).href;
     }
 
     async initAudio() {
@@ -86,6 +88,9 @@ export class SvgAudio {
                 outputChannelCount: [2]
             });
             this.audioWorkletNode.connect(this.audioContext.destination);
+            this.audioWorkletNode.port.onmessage = ({data}) => {
+                if (data.type === "speaking") this.activityHandler?.(data);
+            };
         } catch (error) {
             this.audioRuntime.degradedReason = "Failed loading audio worklets.";
             Logger.log(`[Audio] ${this.audioRuntime.degradedReason}`);
@@ -105,6 +110,14 @@ export class SvgAudio {
 
     setMicIndicator(el) {
         this.micIndicator = el;
+    }
+
+    onVoiceActivity(handler) { this.activityHandler = handler; }
+
+    setLocalSpeaking(speaking) {
+        if (this.localSpeaking === speaking) return;
+        this.localSpeaking = speaking;
+        this.activityHandler?.({type:"speaking",streamId:"self",speaking});
     }
 
     onMicData(handler) {
@@ -160,6 +173,7 @@ export class SvgAudio {
 
         const mode = this.getTransmitMode();
         const pttActive = this.isPttActive();
+        this.setLocalSpeaking(!this.muted && speech && (mode !== "ptt" || pttActive));
 
         for (let i = 0; i < samples.length; i++) {
             const s = Math.max(-1, Math.min(1, samples[i]));
@@ -218,12 +232,14 @@ export class SvgAudio {
 
     shouldSendPacket(mode, speech, pttActive) {
         if (this.muted) return false;
+        if (mode === "open") return true;
         if (mode === "voice") return speech;
         if (mode === "ptt") return pttActive;
         return false;
     }
 
     stopMic() {
+        this.setLocalSpeaking(false);
         this.micSink?.disconnect();
         this.micSink = null;
         if (this.micNode) {
@@ -255,6 +271,7 @@ export class SvgAudio {
 
     toggleMute() {
         this.muted = !this.muted;
+        if (this.muted) this.setLocalSpeaking(false);
         this.preRoll = [];
         this.available = 0; this.readIndex = this.writeIndex;
 
@@ -287,6 +304,8 @@ export class SvgAudio {
     }
 
     resetAudioState() {
+        this.setLocalSpeaking(false);
+        this.activityHandler?.({type:"reset"});
         this.audioWorkletNode?.port.postMessage({ type: "reset" });
 
         this.writeIndex = 0;

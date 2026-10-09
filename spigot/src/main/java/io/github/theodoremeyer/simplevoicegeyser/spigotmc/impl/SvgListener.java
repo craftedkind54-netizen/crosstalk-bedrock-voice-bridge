@@ -28,8 +28,8 @@ public class SvgListener implements Listener {
             for (var target : SvgCore.getPlayerManager().getAllPlayers()) {
                 String bedrockName = io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.bedrockUsername(target.getUniqueId());
                 if (!target.getName().equals(parts[2]) && !parts[2].equals(bedrockName)) continue;
-                if (!io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(target.getUniqueId())
-                        && !io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(sender.getUniqueId())) return;
+                if (!Boolean.TRUE.equals(io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(target.getUniqueId()))
+                        && !Boolean.TRUE.equals(io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(sender.getUniqueId()))) return;
                 event.setCancelled(true);
                 try { sender.sendMessage("[CrossTalk] " + manager.browser.invite(sender, target)); }
                 catch (IllegalArgumentException e) { sender.sendMessage("[CrossTalk] " + e.getMessage()); }

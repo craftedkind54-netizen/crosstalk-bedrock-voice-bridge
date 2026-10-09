@@ -53,6 +53,20 @@ public class BukkitPlayer extends SvgPlayer {
         return player;
     }
 
+    @Override public String getSkinUrl() {
+        var skin = player.getPlayerProfile().getTextures().getSkin();
+        if (skin == null || !skin.getHost().equalsIgnoreCase("textures.minecraft.net")
+                || !skin.getPath().matches("/texture/[a-fA-F0-9]{32,64}")) return "";
+        return "https://textures.minecraft.net" + skin.getPath();
+    }
+    @Override public boolean canSee(SvgPlayer other) {
+        return other instanceof BukkitPlayer b && player.canSee(b.player);
+    }
+    @Override public boolean isNearby(SvgPlayer other, double range) {
+        if (!(other instanceof BukkitPlayer b) || !canSee(other) || !player.getWorld().equals(b.player.getWorld())) return false;
+        return player.getLocation().distanceSquared(b.player.getLocation()) <= range * range;
+    }
+
     @Override
     public void sendMessage(String message) {
         runOnMainThread(() -> player.sendMessage(translate(message)));

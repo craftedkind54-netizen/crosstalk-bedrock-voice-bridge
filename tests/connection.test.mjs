@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SvgWebSocket } from "../core/web/js/websocket.js";
-import { HttpVoiceSocket } from "../core/web/js/http-voice.js?crosstalk=7";
+import { HttpVoiceSocket } from "../core/web/js/http-voice.js?crosstalk=8";
 
 globalThis.location = { protocol: "https:", reload() {} };
 globalThis.window = { location: { href: "https://voice.example.com/" }, isSecureContext: true, PROJECT_VERSION: "test", BUILD_ID: "test" };

@@ -6,7 +6,7 @@ It is a customized MIT-licensed build of SimpleVoice-Geyser, not a Bedrock add-o
 ## Server owner: one-time setup
 
 1. Stop your Paper server and back up its plugins/configuration.
-2. Put `CrossTalk-Paper-0.1.4-crosstalk.7.jar` in `plugins/`.
+2. Put `CrossTalk-Paper-0.1.4-crosstalk.8.jar` in `plugins/`.
    If SimpleVoice-Geyser is already installed, replace it: do not run both.
 3. Keep **Simple Voice Chat's Bukkit/Paper plugin** on the server, plus your
    existing Geyser/Floodgate setup. Your `voicechat-fabric-1.21.11-2.6.22.jar`
@@ -60,9 +60,24 @@ players with `/voicechat invite <playername>`; Bedrock recipients accept on the
 website. Java recipients of website invites can type the exact
 `/voicechat join <group-id>` command from the invitation in Minecraft.
 
-Group lists and invites refresh every five seconds. Groups use Simple Voice
+Group lists, invitations, and player faces refresh every second. Groups use Simple Voice
 Chat's existing audio routing. Server settings and group permissions still
 apply. A failed group action leaves the voice call connected.
+
+### Player faces and speech
+
+The website shows your group members and players within the server's voice
+range. Faces gain a white outline while their audio is playing; your own face
+lights up when your microphone detects speech. Heads appear and disappear as
+players enter or leave range, change groups, or leave Minecraft. Nearby players
+may still be silent because of group settings or because their voice is offline.
+The website uses the skin already supplied by the Minecraft player profile;
+when a proxy does not forward a skin, a default face appears.
+
+The microphone remains open while unmuted to preserve quiet syllables. Use
+**Mute microphone** to stop transmitting. Brief delivery gaps no longer add a
+second full playback-buffer delay. Browser audio uses source-tagged PCM so
+multiple speakers keep separate faces and can be heard together.
 
 ## First live test
 

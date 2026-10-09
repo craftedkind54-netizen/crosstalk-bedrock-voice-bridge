@@ -43,6 +43,7 @@ public final class BrowserGroups {
     }
     public synchronized String invite(SvgPlayer from, SvgPlayer to) {
         check(from); check(to); prune();
+        if (!from.canSee(to)) throw new IllegalArgumentException("That player is not available.");
         var g = connection(from).getGroup();
         if (g == null) throw new IllegalArgumentException("Join or create a group before inviting someone.");
         if (from.getUniqueId().equals(to.getUniqueId())) throw new IllegalArgumentException("Choose another player.");
@@ -111,11 +112,33 @@ public final class BrowserGroups {
         var pending = new JSONArray();
         for (var i : invites.values()) if (i.to == player) pending.put(describe(group(i.group.toString())).put("from", i.from.getName()));
         var players = new JSONArray();
-        for (var p : SvgCore.getPlayerManager().getAllPlayers()) if (p.isOnline() && !p.getUniqueId().equals(player.getUniqueId()))
-            players.put(new JSONObject().put("id", p.getUniqueId()).put("name", p.getName()));
+        for (var p : SvgCore.getPlayerManager().getAllPlayers()) if (p.isOnline() && player.canSee(p) && !p.getUniqueId().equals(player.getUniqueId()))
+            players.put(describePlayer(player, p));
         var current = connection(player).getGroup();
+        var members = new JSONArray();
+        var nearby = new JSONArray();
+        double range = Math.max(0, api().getVoiceChatDistance());
+        for (var p : SvgCore.getPlayerManager().getAllPlayers()) {
+            if (!p.isOnline() || !player.canSee(p)) continue;
+            var pc = api().getConnectionOf(p.getUniqueId());
+            var pg = pc == null ? null : pc.getGroup();
+            boolean sameGroup = current != null && pg != null && current.getId().equals(pg.getId());
+            if (sameGroup) members.put(describePlayer(player, p));
+            else if (!p.getUniqueId().equals(player.getUniqueId()) && player.isNearby(p, range)) nearby.put(describePlayer(player, p));
+        }
         return new JSONObject().put("type", "groups").put("groups", list).put("invites", pending).put("players", players)
-                .put("current", current == null ? JSONObject.NULL : describe(current));
+                .put("current", current == null ? JSONObject.NULL : describe(current))
+                .put("members",members).put("nearby",nearby).put("self",describePlayer(player,player));
+    }
+    private JSONObject describePlayer(SvgPlayer viewer, SvgPlayer p) {
+        boolean bedrock = Boolean.TRUE.equals(io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.isBedrock(p.getUniqueId()));
+        String name = bedrock ? io.github.theodoremeyer.simplevoicegeyser.core.geyser.GeyserHook.bedrockUsername(p.getUniqueId()) : p.getName();
+        var c = api().getConnectionOf(p.getUniqueId());
+        var browser = SvgCore.getConnectionManager().get(p.getUniqueId());
+        return new JSONObject().put("id",p.getUniqueId()).put("name",name == null ? p.getName() : name)
+                .put("edition",bedrock ? "Bedrock" : "Java").put("skin",p.getSkinUrl())
+                .put("self",viewer.getUniqueId().equals(p.getUniqueId()))
+                .put("connected",(browser != null && browser.isAuthenticated()) || (c != null && c.isConnected()));
     }
     private JSONObject describe(Group g) { return new JSONObject().put("id",g.getId()).put("name",g.getName()).put("locked",g.hasPassword()); }
     // SVC's API exposes hasPassword but no password validator. Fail closed if internals change.

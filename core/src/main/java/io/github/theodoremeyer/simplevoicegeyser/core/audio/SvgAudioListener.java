@@ -99,7 +99,7 @@ public final class SvgAudioListener {
         if (source == null || opusData == null) return;
         long enqueuedAt = System.nanoTime();
         AudioThread.execute(() -> {
-            if (System.nanoTime() - enqueuedAt > 250_000_000L) return;
+            if (System.nanoTime() - enqueuedAt > 1_000_000_000L) return;
             if (closed.get() || closing.get()) {
                 packetClosedDropCount++;
                 return;

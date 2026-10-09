@@ -79,6 +79,7 @@ class HttpVoiceCallTest {
         var api = fake(VoicechatServerApi.class, (p,m,a) -> switch(m.getName()) {
             case "getConnectionOf" -> connection;
             case "getGroups" -> List.of();
+            case "getVoiceChatDistance" -> 48D;
             case "createAudioSender" -> sender;
             case "createEncoder" -> encoder;
             case "playerAudioListenerBuilder" -> builder;
