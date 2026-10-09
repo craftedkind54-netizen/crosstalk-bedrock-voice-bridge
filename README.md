@@ -13,7 +13,9 @@ in a live Java/Bedrock call on the target server.**
 
 - A Paper plugin, including its website; no separate web application server.
 - Proximity routing through Simple Voice Chat's player audio sender/listener APIs.
-- Authentication tied to an online Minecraft account and an in-game password.
+- Authentication tied to an online, verified Bedrock account and an in-game password.
+- Browser login requires Floodgate or Geyser verification; Java players use the in-game mod.
+  The legacy `client.requireBedrock: false` setting no longer permits Java browser login.
 - Start call, mute, End call, and actionable connection/microphone errors.
 - Independent speaker decoding and browser mixing for overlapping voices.
 - Bounded browser buffers, bounded server audio queue, and stale audio dropping.
